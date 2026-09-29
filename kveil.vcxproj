@@ -104,9 +104,9 @@
       <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
     </DriverSign>
   </ItemDefinitionGroup>
-  <ItemGroup>
+  <!-- <ItemGroup>
     <Inf Include="kveil.inf" />
-  </ItemGroup>
+  </ItemGroup> -->
   <ItemGroup>
     <FilesToPackage Include="$(TargetPath)" />
   </ItemGroup>
