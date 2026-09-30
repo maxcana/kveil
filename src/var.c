@@ -1,3 +1,4 @@
+// var.c: contains global locations of things; initialized once on load
 #include <ntddk.h>
 #include <string.h>
 #include <undoc.h>
@@ -12,6 +13,7 @@ char* loc_NtQuerySystemInformation;
 char* loc_NtQuerySystemInformationEx;
 // hardcoded
 ExpQuerySystemInformation_t* loc_ExpQuerySystemInformation;
+KeQueryPrimaryGroupThread_t* loc_KeQueryPrimaryGroupThread;
 char* loc_GreProtectSpriteContent;
 
 //* module bases
@@ -69,16 +71,18 @@ static PVOID where_kernelmodule(PCSTR ModuleFileName)
 typedef struct
 {
     uint64_t win11_build_number;
-    uint64_t ExpQuerySystemInformation;
-    uint64_t GreProtectSpriteContent;
+    uint64_t ExpQuerySystemInformation; // ntoskrnl!
+    uint64_t KeQueryPrimaryGroupThread; // ntoskrnl!
+    uint64_t GreProtectSpriteContent;   // win32kfull!
 } KveilOffsets;
 
 // dump System32 then find these in IDA / or use the PDB for that windows version
 static const KveilOffsets hardcoded_offsets[] = {
     {
-        .win11_build_number = 26200,                                   // Win11 25H2
-        .ExpQuerySystemInformation = 0x0000000140A06E08 - 0x140000000, // ntoskrnl!
-        .GreProtectSpriteContent = 0x0000000140256110 - 0x140000000,   // win32kfull!
+        .win11_build_number = 26200, // Win11 25H2
+        .ExpQuerySystemInformation = 0x0000000140A06E08 - 0x140000000,
+        .KeQueryPrimaryGroupThread = 0x0000000140490F54 - 0x140000000,
+        .GreProtectSpriteContent = 0x0000000140256110 - 0x140000000,
     },
 };
 
@@ -90,7 +94,7 @@ int init_globals()
     loc_win32kfull = (char*)where_kernelmodule("win32kfull.sys");
     if (loc_ntoskrnl == NULL || loc_win32kfull == NULL)
     {
-        print("failed to get bases of kernel modules. win32kfull only loads after you logged in. did you run the driver on boot?\n");
+        print("failed to get bases of kernel modules. win32kfull only loads after you logged in. did you run the driver on boot (bad?\n");
         return 1;
     }
 
@@ -105,9 +109,10 @@ int init_globals()
         if (build == ko.win11_build_number)
         {
             loc_ExpQuerySystemInformation = (ExpQuerySystemInformation_t*)((uint64_t)loc_ntoskrnl + (uint64_t)ko.ExpQuerySystemInformation);
+            loc_KeQueryPrimaryGroupThread = (KeQueryPrimaryGroupThread_t*)((uint64_t)loc_ntoskrnl + (uint64_t)ko.KeQueryPrimaryGroupThread);
             loc_GreProtectSpriteContent = (char*)((uint64_t)loc_win32kfull + (uint64_t)ko.GreProtectSpriteContent);
 
-            print("loaded hardcoded offsets {%X, %X} for win11 build %d\n", loc_ExpQuerySystemInformation, loc_GreProtectSpriteContent, build);
+            print("loaded hardcoded offsets {0x%X, 0x%X} for win11 build %d\n", loc_ExpQuerySystemInformation, loc_GreProtectSpriteContent, build);
             goto ok;
         }
     }

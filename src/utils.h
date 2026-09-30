@@ -24,7 +24,7 @@ void* memmem(const void* hay, size_t hlen, const void* ned, size_t nlen)
     return NULL;
 }
 
-char* where(const wchar_t[] routine_name)
+char* where(const wchar_t* routine_name)
 {
     UNICODE_STRING uni;
     RtlInitUnicodeString(&uni, routine_name);
@@ -107,6 +107,6 @@ void print(PCSTR format, ...)
 
 void bsod()
 {
-    WdfVerifierKeBugCheck(0xE2, (ULONG_PTR)format, 0, 0, 0);
+    WdfVerifierKeBugCheck(0xE2, 0, 0, 0, 0);
     return;
 }

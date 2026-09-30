@@ -1,8 +1,9 @@
 #include <hook/ntquery.c>
+#include <hook/greprotect.c>
 #include <utils.h>
 #include <var.h>
 
-// naked mov rax, imm64; jmp rax. does not push/pop the original value of rax. make sure rax is not important.
+// naked mov rax, imm64; jmp rax. does not push/pop the original value of rax. as long as we don't hook a *variadic* function, this is fine per the Win64 ABI.
 int jmp_hook(void* src, void* dest)
 {
     // clang-format off
@@ -28,6 +29,8 @@ int hook_all()
     fails += jmp_hook(loc_NtQuerySystemInformation, hooked_NtQuerySystemInformation);
     print("hooking NtQuerySystemInformationEx...\n");
     fails += jmp_hook(loc_NtQuerySystemInformationEx, hooked_NtQuerySystemInformationEx);
+
+    // TODO this will probably not work. i think i need to be in session space for the right page tables, but idk.
     print("hooking GreProtectSpriteContent...\n");
     fails += jmp_hook(loc_GreProtectSpriteContent, hooked_GreProtectSpriteContent);
 

@@ -1,1 +1,1 @@
-void hook_all();
+int hook_all();

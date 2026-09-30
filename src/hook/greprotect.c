@@ -6,7 +6,10 @@
 
 uint64_t hooked_GreProtectSpriteContent(uint64_t gre_context, PVOID hwnd, int use_dwm_path, uint8_t new_affinity)
 {
-    print("[hooked_GreProtectSpriteContent] someone tried to set affinity on (window handle=%d) to 0x%X, returning 1.", (uint64_t)hwnd, new_affinity);
+    // this doesnt update the value for GetWindowAffinity - this is the raw rendering function (formats and sends a DWM LPC packet).
+    // so if you SetWindowDisplayAffinity(WDA_EXCLUDEFROMCAPTURE), with this hook, it does nothing, and GetDispalyAffinity returns WDA_EXCLUDEFROMCAPTURE.
+    // rederence: https://github.com/KANKOSHEV/NoScreen
+    print("[hooked_GreProtectSpriteContent] someone tried to set affinity on (window handle=%d) to 0x%X, returning 1.\n", (uint64_t)hwnd, new_affinity);
     return 1;
 
     //     int want_hidden = new_affinity & 1;
