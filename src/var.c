@@ -3,18 +3,124 @@
 #include <undoc.h>
 #include <utils.h>
 
-ExpQuerySystemInformation_t* loc_ExpQuerySystemInformation;
+//* exports
+// modules
+char* loc_ntoskrnl;
+char* loc_win32kfull;
+// whereable
 char* loc_NtQuerySystemInformation;
 char* loc_NtQuerySystemInformationEx;
+// hardcoded
+ExpQuerySystemInformation_t* loc_ExpQuerySystemInformation;
+char* loc_GreProtectSpriteContent;
 
+//* module bases
+static PVOID where_ntoskrnl()
+{
+    PVOID base = NULL;
+    RtlPcToFileHeader((PVOID)ExAllocatePoolWithTag, &base);
+    return base;
+}
+static PVOID where_kernelmodule(PCSTR ModuleFileName)
+{
+    ULONG bufSize = 0;
+    NTSTATUS status;
+    PVOID result = NULL;
+
+    // First call gets the required buffer size
+    status = ZwQuerySystemInformation(SystemModuleInformation, NULL, 0, &bufSize);
+    if (status != STATUS_INFO_LENGTH_MISMATCH || bufSize == 0) return NULL;
+
+    // Pad for TOCTOU; modules can load between the two calls
+    bufSize += sizeof(RTL_PROCESS_MODULE_INFORMATION) * 16;
+
+    PRTL_PROCESS_MODULES mods = (PRTL_PROCESS_MODULES)ExAllocatePool2(POOL_FLAG_NON_PAGED, bufSize, 'BOOM');
+
+    if (!mods) return NULL;
+
+    RtlZeroMemory(mods, bufSize);
+
+    status = ZwQuerySystemInformation(SystemModuleInformation, mods, bufSize, &bufSize);
+    if (NT_SUCCESS(status))
+    {
+
+        for (ULONG i = 0; i < mods->NumberOfModules; i++)
+        {
+            PRTL_PROCESS_MODULE_INFORMATION mod = &mods->Modules[i];
+
+            // OffsetToFileName skips "\SystemRoot\System32\" prefix
+            // so mod->FullPathName + mod->OffsetToFileName == "win32kfull.sys"
+            PCSTR leaf = (PCSTR)mod->FullPathName + mod->OffsetToFileName;
+
+            if (stricmp(leaf, ModuleFileName) == 0)
+            {
+                result = mod->ImageBase; // Runtime VA like 0xFFFFF87A00000000
+                break;
+            }
+        }
+    }
+
+    // cleanup
+    ExFreePoolWithTag(mods, 'BOOM');
+    return result;
+}
+
+//* hardcoding
+typedef struct
+{
+    uint64_t win11_build_number;
+    uint64_t ExpQuerySystemInformation;
+    uint64_t GreProtectSpriteContent;
+} KveilOffsets;
+
+// dump System32 then find these in IDA / or use the PDB for that windows version
+static const KveilOffsets hardcoded_offsets[] = {
+    {
+        .win11_build_number = 26200,                                   // Win11 25H2
+        .ExpQuerySystemInformation = 0x0000000140A06E08 - 0x140000000, // ntoskrnl!
+        .GreProtectSpriteContent = 0x0000000140256110 - 0x140000000,   // win32kfull!
+    },
+};
+
+//* init
 int init_globals()
 {
-    ExpQuerySystemInformation = try_find_ExpQuerySystemInformation();
-    if (ExpQuerySystemInformation == NULL) return 0;
+    // populate modules
+    loc_ntoskrnl = (char*)where_ntoskrnl();
+    loc_win32kfull = (char*)where_kernelmodule("win32kfull.sys");
+    if (loc_ntoskrnl == NULL || loc_win32kfull == NULL)
+    {
+        print("failed to get bases of kernel modules. win32kfull only loads after you logged in. did you run the driver on boot?\n");
+        return 1;
+    }
 
+    // populate hardcoded
+    OSVERSIONINFOW osvi;
+    RtlGetVersion(&osvi);
+    uint64_t build = osvi.dwBuildNumber;
+
+    for (int i = 0; i < hardcoded_offsets.length; i++)
+    {
+        KveilOffsets ko = hardcoded_offsets[i];
+        if (build == ko.win11_build_number)
+        {
+            loc_ExpQuerySystemInformation = (ExpQuerySystemInformation_t*)((uint64_t)loc_ntoskrnl + (uint64_t)ko.ExpQuerySystemInformation);
+            loc_GreProtectSpriteContent = (char*)((uint64_t)loc_win32kfull + (uint64_t)ko.GreProtectSpriteContent);
+
+            print("loaded hardcoded offsets {%X, %X} for win11 build %d\n", loc_ExpQuerySystemInformation, loc_GreProtectSpriteContent, build);
+            goto ok;
+        }
+    }
+    print("ERROR your win11 version (%d) is missing hardcoded offsets, go mine the offsets\n", build);
+    return 1;
+ok:
+
+    // populate whereable
     loc_NtQuerySystemInformation = where(L"NtQuerySystemInformation");
-    if (loc_NtQuerySystemInformation == NULL) return 0;
+    if (loc_NtQuerySystemInformation == NULL) return 1;
 
     loc_NtQuerySystemInformationEx = where(L"NtQuerySystemInformationEx");
-    if (loc_NtQuerySystemInformationEx == NULL) return 0;
+    if (loc_NtQuerySystemInformationEx == NULL) return 1;
+
+    return 0;
 }

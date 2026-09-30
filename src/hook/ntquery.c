@@ -3,7 +3,7 @@
 #include <var.h>
 #include <wdm.h>
 
-NTSTATUS __fastcall new_NtQuerySystemInformation(int32_t SystemInformationClass, uint64_t* SystemInformation, uint32_t SystemInformationLength,
+NTSTATUS __fastcall hooked_NtQuerySystemInformation(int32_t SystemInformationClass, uint64_t* SystemInformation, uint32_t SystemInformationLength,
                                                  uint32_t* ReturnLength)
 {
     _SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX* groupBuffer = nullptr;
@@ -54,7 +54,7 @@ NTSTATUS __fastcall new_NtQuerySystemInformation(int32_t SystemInformationClass,
     return ExpQuerySystemInformation(SystemInformationClass, groupBuffer, groupBufferSize, SystemInformation, SystemInformationLength, ReturnLength);
 }
 
-NTSTATUS __fastcall new_NtQuerySystemInformationEx(int32_t InfoClass, _SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX* InputBuffer,
+NTSTATUS __fastcall hooked_NtQuerySystemInformationEx(int32_t InfoClass, _SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX* InputBuffer,
                                                    uint32_t InputBufferLength, uint64_t* SystemInformation, unsigned int SystemInformationLength,
                                                    uint32_t* ReturnLength)
 {

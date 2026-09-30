@@ -3,6 +3,8 @@
 #include <string.h>
 #include <wdf.h>
 
+// MARK: misc
+
 void* memmem(const void* hay, size_t hlen, const void* ned, size_t nlen)
 {
     if (nlen == 0) return (void*)hay;
@@ -29,23 +31,82 @@ char* where(const wchar_t[] routine_name)
     return MmGetSystemRoutineAddress(uni);
 }
 
-// void* find()
+/*
+thanks to https://github.com/mrexodia/TitanHide for original function "RtlSuperCopyMemory"
+---
+The MIT License (MIT)
 
-void print(PCSTR format)
+Copyright (c) 2015 TitanHide
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+// copy memory even to write-protected regions
+NTSTATUS kmemcpy(VOID UNALIGNED* Destination, CONST VOID UNALIGNED* Source, ULONG Length)
 {
-    DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, format);
+    const KIRQL Irql = KeRaiseIrqlToDpcLevel();
+
+    PMDL Mdl = IoAllocateMdl(Destination, Length, 0, 0, nullptr);
+    if (Mdl == nullptr)
+    {
+        KeLowerIrql(Irql);
+        return STATUS_NO_MEMORY;
+    }
+
+    MmBuildMdlForNonPagedPool(Mdl);
+
+    // Hack: prevent bugcheck from Driver Verifier and possible future versions of Windows
+    const CSHORT OriginalMdlFlags = Mdl->MdlFlags;
+    Mdl->MdlFlags |= MDL_PAGES_LOCKED;
+    Mdl->MdlFlags &= ~MDL_SOURCE_IS_NONPAGED_POOL;
+
+    // Map pages and do the copy
+    const PVOID Mapped = MmMapLockedPagesSpecifyCache(Mdl, KernelMode, MmCached, nullptr, FALSE, HighPagePriority);
+    if (Mapped == nullptr)
+    {
+        Mdl->MdlFlags = OriginalMdlFlags;
+        IoFreeMdl(Mdl);
+        KeLowerIrql(Irql);
+        return STATUS_NONE_MAPPED;
+    }
+
+    RtlCopyMemory(Mapped, Source, Length);
+
+    MmUnmapLockedPages(Mapped, Mdl);
+    Mdl->MdlFlags = OriginalMdlFlags;
+
+    IoFreeMdl(Mdl);
+    KeLowerIrql(Irql);
+
+    return STATUS_SUCCESS;
 }
 
-void yikes(PCSTR format)
+void print(PCSTR format, ...)
 {
-    DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, "[ERROR] yikes: ");
-    DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, format);
+    va_list argList;
+    va_start(argList, format);
+    vDbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, format, argList);
+    va_end(argList);
+    return;
 }
 
-void bsod(PCSTR format)
+void bsod()
 {
-    DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, "[FATAL] bsod: ");
-    DbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, format);
-
     WdfVerifierKeBugCheck(0xE2, (ULONG_PTR)format, 0, 0, 0);
+    return;
 }

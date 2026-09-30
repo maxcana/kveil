@@ -1,3 +1,4 @@
+#include <hooks.h>
 #include <ntddk.h>
 #include <utils.h>
 #include <var.h>
@@ -14,7 +15,8 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING RegistryPath)
 {
     print("hello from kernel\n");
 
-    if (init_globals() == 0) return STATUS_UNSUCCESSFUL;
+    if (init_globals() != 0) return STATUS_UNSUCCESSFUL;
+    if (hook_all() != 0) return STATUS_UNSUCCESSFUL;
 
     WDF_DRIVER_CONFIG config;
     WDF_DRIVER_CONFIG_INIT(&config, on_device_added);
