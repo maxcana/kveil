@@ -3,10 +3,14 @@ Language: C
 BasedOnStyle: Microsoft
 PointerAlignment: Left
 IndentWidth: 4
-ColumnLimit: 150
+ColumnLimit: 180
 
 AllowShortIfStatementsOnASingleLine: Always 
 # Required if statement contains {}, ex.: if (x) { return; }
 # AllowShortBlocksOnASingleLine: Always 
 
 IndentCaseLabels: true
+
+BreakBeforeBraces: Custom
+BraceWrapping:
+  BeforeWhile: true

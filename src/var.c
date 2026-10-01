@@ -1,10 +1,33 @@
-// var.c: contains global locations of things; initialized once on load
+// var.c: contains global values or offsets; initialized once on load
 #include <ntddk.h>
 #include <string.h>
 #include <undoc.h>
 #include <utils.h>
 
-//* exports
+//* # EXPORTS
+
+//* ## Values
+static const uint64_t hidden_images_count = 3; // c has no array.length kek
+static const UNICODE_STRING hidden_images[] = {
+    RTL_CONSTANT_STRING(L"python.exe"),
+    RTL_CONSTANT_STRING(L"python3.exe"),
+    RTL_CONSTANT_STRING(L"pythonw.exe"),
+};
+
+int should_hide(UNICODE_STRING target)
+{
+    for (int i = 0; i < hidden_images_count; i++;)
+    {
+        if (RtlEqualUnicodeString(&target, &hidden_images[i], TRUE))
+        {
+            // we need to hide this
+            return 1;
+        }
+    }
+    return 0;
+}
+
+//* ## Offsets
 // modules
 char* loc_ntoskrnl;
 char* loc_win32kfull;
@@ -15,6 +38,14 @@ char* loc_NtQuerySystemInformationEx;
 ExpQuerySystemInformation_t* loc_ExpQuerySystemInformation;
 KeQueryPrimaryGroupThread_t* loc_KeQueryPrimaryGroupThread;
 char* loc_GreProtectSpriteContent;
+
+//* # INTERNAL LOGIC
+
+(const wchar_t*)[] hidden_images = ((const wchar_t*)[]){
+    L"python.exe",
+    L"python3.exe",
+    L"pythonw.exe",
+};
 
 //* module bases
 static PVOID where_ntoskrnl()

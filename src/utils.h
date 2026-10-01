@@ -24,11 +24,18 @@ void* memmem(const void* hay, size_t hlen, const void* ned, size_t nlen)
     return NULL;
 }
 
-char* where(const wchar_t* routine_name)
+// returns a pointer to the same thing; doesn't copy the buffer
+UNICODE_STRING uniencode(const wchar_t* in)
 {
     UNICODE_STRING uni;
-    RtlInitUnicodeString(&uni, routine_name);
-    return MmGetSystemRoutineAddress(uni);
+    RtlInitUnicodeString(&uni, in);
+    return uni;
+}
+
+char* where(const wchar_t* routine_name)
+{
+    UNICODE_STRING uni = uniencode(routine_name);
+    return MmGetSystemRoutineAddress(&uni);
 }
 
 /*

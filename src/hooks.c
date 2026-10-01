@@ -27,8 +27,8 @@ int hook_all()
     
     print("hooking NtQuerySystemInformation...\n");
     fails += jmp_hook(loc_NtQuerySystemInformation, hooked_NtQuerySystemInformation);
-    print("hooking NtQuerySystemInformationEx...\n");
-    fails += jmp_hook(loc_NtQuerySystemInformationEx, hooked_NtQuerySystemInformationEx);
+    // print("hooking NtQuerySystemInformationEx...\n");
+    // fails += jmp_hook(loc_NtQuerySystemInformationEx, hooked_NtQuerySystemInformationEx);
 
     // TODO this will probably not work. i think i need to be in session space for the right page tables, but idk.
     print("hooking GreProtectSpriteContent...\n");
