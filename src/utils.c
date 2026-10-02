@@ -155,7 +155,7 @@ uint32_t find_a_session1_process_pid()
         if (p->SessionId != 0)
         {
             uint32_t pid = p->UniqueProcessId;
-            print("find_session1_process_pid: FOUND! %wZ, PID %d", &p->ImageName, (uint32_t)pid);
+            print("find_session1_process_pid: FOUND! %wZ, PID %d\n", &p->ImageName, (uint32_t)pid);
             ExFreePoolWithTag(procs, 'BOOM');
             return pid;
         }
