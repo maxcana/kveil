@@ -63,28 +63,39 @@ NTSTATUS __fastcall hooked_NtQuerySystemInformation(int32_t SystemInformationCla
             // maybe STATUS_INFO_LENGTH_MISMATCH
             if (!NT_SUCCESS(s)) return s;
 
-            _SYSTEM_PROCESS_INFORMATION* last_unhidden_p = NULL;
-            for (_SYSTEM_PROCESS_INFORMATION* p = SystemInformation;;) // huh, C allows implicit void* -> Any* casts in declaration, but only for void*. cool
+            // let's be a good kernel dev:
+            // "If an operation might cause an exception, the driver should enclose the operation in a try/except block. Accesses of locations in user-mode are typical causes of exceptions"
+            // (https://learn.microsoft.com/en-us/windows-hardware/drivers/kernel/handling-exceptions)
+            __try
             {
-                // ImageName: filename of the binary, ex. "python.exe", "python3.exe", "pythonw.exe"
-                // UniqueProcessId: the real PID, ex. 1234
-                if (p->ImageName != NULL && last_unhidden_p != NULL && should_hide(p->ImageName))
+                _SYSTEM_PROCESS_INFORMATION* last_unhidden_p = NULL;
+                for (_SYSTEM_PROCESS_INFORMATION* p = SystemInformation;;) // huh, C allows implicit void* -> Any* casts in declaration, but only for void*. cool
                 {
-                    if (p->NextEntryOffset == NULL)
+                    // ImageName: filename of the binary, ex. "python.exe", "python3.exe", "pythonw.exe"
+                    // UniqueProcessId: the real PID, ex. 1234
+                    if (p->ImageName != NULL && last_unhidden_p != NULL && should_hide(p->ImageName))
                     {
-                        last_unhidden_p->NextEntryOffset = NULL;
-                        break;
+                        if (p->NextEntryOffset == NULL)
+                        {
+                            last_unhidden_p->NextEntryOffset = NULL;
+                            break;
+                        }
+                        last_unhidden_p->NextEntryOffset += p->NextEntryOffset;
                     }
-                    last_unhidden_p->NextEntryOffset += p->NextEntryOffset;
+                    else
+                        last_unhidden_p = p;
+
+                    // no more processes; final linked list entry
+                    if (!p->NextEntryOffset) break;
+
+                    p = (_SYSTEM_PROCESS_INFORMATION*)((UCHAR*)p + p->NextEntryOffset);
                 }
-                else
-                    last_unhidden_p = p;
-
-                // no more processes; final linked list entry
-                if (!p->NextEntryOffset) break;
-
-                p = (_SYSTEM_PROCESS_INFORMATION*)((UCHAR*)p + p->NextEntryOffset);
             }
+            __except (EXCEPTION_EXECUTE_HANDLER)
+            {
+                return GetExceptionCode(); // usually STATUS_ACCESS_VIOLATION
+            }
+
             return STATUS_SUCCESS;
         }
         // SystemSessionProcessInformation
@@ -95,25 +106,33 @@ NTSTATUS __fastcall hooked_NtQuerySystemInformation(int32_t SystemInformationCla
 
             SYSTEM_SESSION_PROCESS_INFORMATION* sess = SystemInformation;
 
-            _SYSTEM_PROCESS_INFORMATION* last_unhidden_p = NULL;
-            for (_SYSTEM_PROCESS_INFORMATION* p = sess->Buffer;;)
+            __try
             {
-                if (p->ImageName != NULL && last_unhidden_p != NULL && should_hide(p->ImageName))
+                _SYSTEM_PROCESS_INFORMATION* last_unhidden_p = NULL;
+                for (_SYSTEM_PROCESS_INFORMATION* p = sess->Buffer;;)
                 {
-                    if (p->NextEntryOffset == NULL)
+                    if (p->ImageName != NULL && last_unhidden_p != NULL && should_hide(p->ImageName))
                     {
-                        last_unhidden_p->NextEntryOffset = NULL;
-                        break;
+                        if (p->NextEntryOffset == NULL)
+                        {
+                            last_unhidden_p->NextEntryOffset = NULL;
+                            break;
+                        }
+                        last_unhidden_p->NextEntryOffset += p->NextEntryOffset;
                     }
-                    last_unhidden_p->NextEntryOffset += p->NextEntryOffset;
+                    else
+                        last_unhidden_p = p;
+
+                    if (!p->NextEntryOffset) break;
+
+                    p = (_SYSTEM_PROCESS_INFORMATION*)((UCHAR*)p + p->NextEntryOffset);
                 }
-                else
-                    last_unhidden_p = p;
-
-                if (!p->NextEntryOffset) break;
-
-                p = (_SYSTEM_PROCESS_INFORMATION*)((UCHAR*)p + p->NextEntryOffset);
             }
+            __except (EXCEPTION_EXECUTE_HANDLER)
+            {
+                return GetExceptionCode();
+            }
+
             return STATUS_SUCCESS;
         }
         // SystemExtendedProcessInformation
@@ -121,25 +140,33 @@ NTSTATUS __fastcall hooked_NtQuerySystemInformation(int32_t SystemInformationCla
             NTSTATUS s = loc_ExpQuerySystemInformation(0x39, grpBuf, grpBufSize, SystemInformation, SystemInformationLength, ReturnLength);
             if (!NT_SUCCESS(s)) return s;
 
-            _SYSTEM_PROCESS_INFORMATION* last_unhidden_p = NULL;
-            for (_SYSTEM_PROCESS_INFORMATION* p = SystemInformation;;)
+            __try
             {
-                if (p->ImageName != NULL && last_unhidden_p != NULL && should_hide(p->ImageName))
+                _SYSTEM_PROCESS_INFORMATION* last_unhidden_p = NULL;
+                for (_SYSTEM_PROCESS_INFORMATION* p = SystemInformation;;)
                 {
-                    if (p->NextEntryOffset == NULL)
+                    if (p->ImageName != NULL && last_unhidden_p != NULL && should_hide(p->ImageName))
                     {
-                        last_unhidden_p->NextEntryOffset = NULL;
-                        break;
+                        if (p->NextEntryOffset == NULL)
+                        {
+                            last_unhidden_p->NextEntryOffset = NULL;
+                            break;
+                        }
+                        last_unhidden_p->NextEntryOffset += p->NextEntryOffset;
                     }
-                    last_unhidden_p->NextEntryOffset += p->NextEntryOffset;
+                    else
+                        last_unhidden_p = p;
+
+                    if (!p->NextEntryOffset) break;
+
+                    p = (_SYSTEM_PROCESS_INFORMATION*)((UCHAR*)p + p->NextEntryOffset);
                 }
-                else
-                    last_unhidden_p = p;
-
-                if (!p->NextEntryOffset) break;
-
-                p = (_SYSTEM_PROCESS_INFORMATION*)((UCHAR*)p + p->NextEntryOffset);
             }
+            __except (EXCEPTION_EXECUTE_HANDLER)
+            {
+                return GetExceptionCode();
+            }
+
             return STATUS_SUCCESS;
         }
         // SystemFullProcessInformation
@@ -147,24 +174,31 @@ NTSTATUS __fastcall hooked_NtQuerySystemInformation(int32_t SystemInformationCla
             NTSTATUS s = loc_ExpQuerySystemInformation(0x94, grpBuf, grpBufSize, SystemInformation, SystemInformationLength, ReturnLength);
             if (!NT_SUCCESS(s)) return s;
 
-            _SYSTEM_PROCESS_INFORMATION* last_unhidden_p = NULL;
-            for (_SYSTEM_PROCESS_INFORMATION* p = SystemInformation;;)
+            __try
             {
-                if (p->ImageName != NULL && last_unhidden_p != NULL && should_hide(p->ImageName))
+                _SYSTEM_PROCESS_INFORMATION* last_unhidden_p = NULL;
+                for (_SYSTEM_PROCESS_INFORMATION* p = SystemInformation;;)
                 {
-                    if (p->NextEntryOffset == NULL)
+                    if (p->ImageName != NULL && last_unhidden_p != NULL && should_hide(p->ImageName))
                     {
-                        last_unhidden_p->NextEntryOffset = NULL;
-                        break;
+                        if (p->NextEntryOffset == NULL)
+                        {
+                            last_unhidden_p->NextEntryOffset = NULL;
+                            break;
+                        }
+                        last_unhidden_p->NextEntryOffset += p->NextEntryOffset;
                     }
-                    last_unhidden_p->NextEntryOffset += p->NextEntryOffset;
+                    else
+                        last_unhidden_p = p;
+
+                    if (!p->NextEntryOffset) break;
+
+                    p = (_SYSTEM_PROCESS_INFORMATION*)((UCHAR*)p + p->NextEntryOffset);
                 }
-                else
-                    last_unhidden_p = p;
-
-                if (!p->NextEntryOffset) break;
-
-                p = (_SYSTEM_PROCESS_INFORMATION*)((UCHAR*)p + p->NextEntryOffset);
+            }
+            __except (EXCEPTION_EXECUTE_HANDLER)
+            {
+                return GetExceptionCode();
             }
             return STATUS_SUCCESS;
         }
@@ -173,24 +207,32 @@ NTSTATUS __fastcall hooked_NtQuerySystemInformation(int32_t SystemInformationCla
             NTSTATUS s = loc_ExpQuerySystemInformation(0xFC, grpBuf, grpBufSize, SystemInformation, SystemInformationLength, ReturnLength);
             if (!NT_SUCCESS(s)) return s;
 
-            _SYSTEM_BASICPROCESS_INFORMATION* last_unhidden_p = NULL;
-            for (_SYSTEM_BASICPROCESS_INFORMATION* p = SystemInformation;;)
+            __try
             {
-                if (p->ImageName != NULL && last_unhidden_p != NULL && should_hide(p->ImageName))
+
+                _SYSTEM_BASICPROCESS_INFORMATION* last_unhidden_p = NULL;
+                for (_SYSTEM_BASICPROCESS_INFORMATION* p = SystemInformation;;)
                 {
-                    if (p->NextEntryOffset == NULL)
+                    if (p->ImageName != NULL && last_unhidden_p != NULL && should_hide(p->ImageName))
                     {
-                        last_unhidden_p->NextEntryOffset = NULL;
-                        break;
+                        if (p->NextEntryOffset == NULL)
+                        {
+                            last_unhidden_p->NextEntryOffset = NULL;
+                            break;
+                        }
+                        last_unhidden_p->NextEntryOffset += p->NextEntryOffset;
                     }
-                    last_unhidden_p->NextEntryOffset += p->NextEntryOffset;
+                    else
+                        last_unhidden_p = p;
+
+                    if (!p->NextEntryOffset) break;
+
+                    p = (_SYSTEM_BASICPROCESS_INFORMATION*)((UCHAR*)p + p->NextEntryOffset);
                 }
-                else
-                    last_unhidden_p = p;
-
-                if (!p->NextEntryOffset) break;
-
-                p = (_SYSTEM_BASICPROCESS_INFORMATION*)((UCHAR*)p + p->NextEntryOffset);
+            }
+            __except (EXCEPTION_EXECUTE_HANDLER)
+            {
+                return GetExceptionCode();
             }
             return STATUS_SUCCESS;
         }
@@ -220,7 +262,14 @@ NTSTATUS __fastcall hooked_NtQuerySystemInformation(int32_t SystemInformationCla
             // basic spoof HVCI on; if this matters to you, also hook SystemIsolatedUserModeInformation etc
             // the important part is that the ENABLED bit is spoofed
             ci.CodeIntegrityOptions = 0x2000 + 0x0400 + 0x1000 + 0x0001;
-            memcpy(SystemInformation, &ci, sizeof(ci));
+            __try
+            {
+                memcpy(SystemInformation, &ci, sizeof(ci));
+            }
+            __except (EXCEPTION_EXECUTE_HANDLER)
+            {
+                return GetExceptionCode();
+            }
 
             return STATUS_SUCCESS;
         }
