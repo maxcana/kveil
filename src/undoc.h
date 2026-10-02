@@ -13,14 +13,14 @@ NTKERNELAPI PVOID NTAPI RtlPcToFileHeader(_In_ PVOID PcValue, _Out_ PVOID* BaseO
 // int Length, ULONG* a6)
 
 // note: __fastcall and __stdcall etc does absolutely nothing on MSVC x64 builds
-typedef NTSTATUS __fastcall ExpQuerySystemInformation_t(int32_t a1, struct _SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX* a2, uint32_t a3, uint64_t* a4, uint32_t Length, uint32_t* a6);
+typedef NTSTATUS ExpQuerySystemInformation_t(int32_t a1, struct _SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX* a2, uint32_t a3, uint64_t* a4, uint32_t Length, uint32_t* a6);
 
 // original from decompilation; wait, it literally just adds 584 to it. but idk of this changes depending on windows version:
 // __int64 __fastcall KeQueryPrimaryGroupThread(__int64 a1)
 // {
 //   return *(unsigned __int16 *)(a1 + 584);
 // }
-typedef USHORT __fastcall KeQueryPrimaryGroupThread_t(int64_t a1);
+typedef USHORT KeQueryPrimaryGroupThread_t(int64_t a1);
 
 /**
  * The NtQuerySystemInformation routine queries information about the system.
@@ -32,7 +32,7 @@ typedef USHORT __fastcall KeQueryPrimaryGroupThread_t(int64_t a1);
  * \return NTSTATUS Successful or errant status.
  * \see https://learn.microsoft.com/en-us/windows/win32/sysinfo/zwquerysysteminformation
  */
-typedef NTSTATUS NtQuerySystemInformation_t(uint32_t SystemInformationClass, void* SystemInformation, uint64_t SystemInformationLength, uint64_t* ReturnLength);
+typedef NTSTATUS NtQuerySystemInformation_t(int32_t SystemInformationClass, void* SystemInformation, uint32_t SystemInformationLength, uint32_t* ReturnLength);
 
 // thx ntdoc
 // dont need this but i need it for other definitions below

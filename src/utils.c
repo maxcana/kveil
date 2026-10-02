@@ -127,7 +127,7 @@ void bsod()
 // REQUIRES loc_NtQuerySystemInformation to be filled in; var.c must be initialized!!!!
 uint32_t find_a_session1_process_pid()
 {
-    uint64_t bufSize = 4096;
+    uint32_t bufSize = 4096;
     NTSTATUS status;
 
     void* procs = NULL;

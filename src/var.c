@@ -54,7 +54,7 @@ static PVOID where_ntoskrnl()
 }
 static PVOID where_kernelmodule(PCSTR ModuleFileName)
 {
-    ULONG bufSize = 0;
+    uint32_t bufSize = 0;
     NTSTATUS status;
 
     // first call gets the required buffer size
@@ -70,8 +70,7 @@ static PVOID where_kernelmodule(PCSTR ModuleFileName)
     status = loc_NtQuerySystemInformation(0xB, mods, bufSize, &bufSize);
     if (NT_SUCCESS(status))
     {
-
-        for (ULONG i = 0; i < mods->NumberOfModules; i++)
+        for (uint32_t i = 0; i < mods->NumberOfModules; i++)
         {
             PRTL_PROCESS_MODULE_INFORMATION mod = &mods->Modules[i];
 
@@ -136,23 +135,24 @@ int init_globals()
     OSVERSIONINFOW osvi;
     RtlGetVersion(&osvi);
     uint64_t build = osvi.dwBuildNumber;
+    print("your win11 build is %d\n", build);
 
     for (int i = 0; i < ARRAYSIZE(hardcoded_offsets); i++)
     {
         KveilOffsets ko = hardcoded_offsets[i];
         if (build == ko.win11_build_number)
         {
-            print("loading hardcoded offsets for win11 build %d...\n", build);
+            print("found hardcoded offsets for win11 build %d...\n", build);
 
             loc_ExpQuerySystemInformation = (ExpQuerySystemInformation_t*)((uint64_t)loc_ntoskrnl + (uint64_t)ko.ExpQuerySystemInformation);
             loc_KeQueryPrimaryGroupThread = (KeQueryPrimaryGroupThread_t*)((uint64_t)loc_ntoskrnl + (uint64_t)ko.KeQueryPrimaryGroupThread);
             loc_GreProtectSpriteContent = (char*)((uint64_t)loc_win32kfull + (uint64_t)ko.GreProtectSpriteContent);
 
-            print("ntoskrnl!ExpQuerySystemInformation@0x%I64X\n", loc_ExpQuerySystemInformation);
-            print("ntoskrnl!KeQueryPrimaryGroupThread@0x%I64X\n", loc_KeQueryPrimaryGroupThread);
-            print("win32kfull!GreProtectSpriteContent@0x%I64X\n", loc_GreProtectSpriteContent);
-            
-            print("finished loading hardcoded offsets!\n", build);
+            print("ntoskrnl!ExpQuerySystemInformation @ 0x%I64X\n", loc_ExpQuerySystemInformation);
+            print("ntoskrnl!KeQueryPrimaryGroupThread @ 0x%I64X\n", loc_KeQueryPrimaryGroupThread);
+            print("win32kfull!GreProtectSpriteContent @ 0x%I64X\n", loc_GreProtectSpriteContent);
+
+            print("finished loading hardcoded offsets.\n", build);
             return 1;
         }
     }
