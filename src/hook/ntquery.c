@@ -50,7 +50,6 @@ NTSTATUS __fastcall hooked_NtQuerySystemInformation(int32_t SystemInformationCla
             // grpBuf stays nullptr, grpBufSize stays 0
             break;
     }
-    return loc_ExpQuerySystemInformation(SystemInformationClass, grpBuf, grpBufSize, SystemInformation, SystemInformationLength, ReturnLength);
 
     // output: addr=SystemInformation, length=*ReturnLength
 
