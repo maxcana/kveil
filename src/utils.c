@@ -7,6 +7,8 @@
 #include <var.h>
 #include <wdf.h>
 
+#define offsetof(type, member) ((size_t)&(((type*)0)->member))
+
 // MARK: misc
 
 void* memmem(const void* hay, size_t hlen, const void* ned, size_t nlen)

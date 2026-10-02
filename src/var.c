@@ -117,7 +117,7 @@ static const NtoskrnlOffsets ntoskrnl_offsets[] = {
     },
 };
 
-static const KveilOffsets win32kfull_offsets[] = {
+static const Win32kfullOffsets win32kfull_offsets[] = {
     {
         .build_number = {.guid = {0x01234567, 0x89ab, 0xcdef, {0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef}}, .age = 1, .name = {0}},
         .GreProtectSpriteContent = 0x0000000140256110 - 0x140000000,
@@ -149,13 +149,13 @@ int init_globals()
     PdbId ntoskrnl_build;
     get_pdbid(loc_ntoskrnl, &ntoskrnl_build);
     char ntoskrnl_guid_buf[80];
-    format_guid(ntoskrnl_build, ntoskrnl_guid_buf, 80);
+    format_guid(&ntoskrnl_build.guid, ntoskrnl_guid_buf, 80);
     print("your ntoskrnl build id: %s %s %u\n", ntoskrnl_build.name, ntoskrnl_guid_buf, ntoskrnl_build.age);
 
     PdbId win32kfull_build;
     get_pdbid(loc_win32kfull, &win32kfull_build);
     char win32kfull_guid_buf[80];
-    format_guid(win32kfull_build, win32kfull_guid_buf, 80);
+    format_guid(&win32kfull_build.guid, win32kfull_guid_buf, 80);
     print("your win32kfull build id: %s %s %u\n", win32kfull_build.name, win32kfull_guid_buf, win32kfull_build.age);
 
     // match your build to hardcoded offsets, resolve addresses
@@ -163,9 +163,9 @@ int init_globals()
     for (int i = 0; i < ARRAYSIZE(ntoskrnl_offsets); i++)
     {
         NtoskrnlOffsets o = ntoskrnl_offsets[i];
-        if (pdbid_equal(ntoskrnl_build, o.build_number))
+        if (pdbid_equal(&ntoskrnl_build, &o.build_number))
         {
-            print("found hardcoded ntoskrnl offsets for build!\n", build);
+            print("found hardcoded ntoskrnl offsets for your build!\n");
 
             loc_ExpQuerySystemInformation = (ExpQuerySystemInformation_t*)((uint64_t)loc_ntoskrnl + (uint64_t)o.ExpQuerySystemInformation);
             loc_KeQueryPrimaryGroupThread = (KeQueryPrimaryGroupThread_t*)((uint64_t)loc_ntoskrnl + (uint64_t)o.KeQueryPrimaryGroupThread);
@@ -173,7 +173,7 @@ int init_globals()
             print("ntoskrnl!ExpQuerySystemInformation @ 0x%I64X\n", loc_ExpQuerySystemInformation);
             print("ntoskrnl!KeQueryPrimaryGroupThread @ 0x%I64X\n", loc_KeQueryPrimaryGroupThread);
 
-            print("finished loading ntoskrnl offsets.\n", build);
+            print("finished loading ntoskrnl offsets.\n");
             break;
         }
         if (i == ARRAYSIZE(ntoskrnl_offsets) - 1)
@@ -186,15 +186,15 @@ int init_globals()
     for (int i = 0; i < ARRAYSIZE(win32kfull_offsets); i++)
     {
         Win32kfullOffsets o = win32kfull_offsets[i];
-        if (pdbid_equal(win32kfull_build, o.build_number))
+        if (pdbid_equal(&win32kfull_build, &o.build_number))
         {
-            print("found hardcoded win32kfull_build offsets for your build!\n", build);
+            print("found hardcoded win32kfull_build offsets for your build!\n");
 
             loc_GreProtectSpriteContent = (char*)((uint64_t)loc_win32kfull + (uint64_t)o.GreProtectSpriteContent);
 
             print("win32kfull!GreProtectSpriteContent @ 0x%I64X\n", loc_GreProtectSpriteContent);
 
-            print("finished loading win32kfull offsets.\n", build);
+            print("finished loading win32kfull offsets.\n");
             break;
         }
         if (i == ARRAYSIZE(win32kfull_offsets) - 1)
