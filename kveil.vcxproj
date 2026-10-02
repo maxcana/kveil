@@ -85,7 +85,7 @@
       <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
     </DriverSign>
     <ClCompile>
-      <AdditionalIncludeDirectories>C:\Program Files (x86)\Windows Kits\10\Include\10.0.28000.0\km;C:\Program Files (x86)\Windows Kits\10\Include\wdf\kmdf\1.35</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Program Files (x86)\Windows Kits\10\Include\10.0.28000.0\km;C:\Program Files (x86)\Windows Kits\10\Include\wdf\kmdf\1.35;$(ProjectDir)src;$(ProjectDir)src/hook;</AdditionalIncludeDirectories>
       <TreatWarningAsError>false</TreatWarningAsError>
     </ClCompile>
   </ItemDefinitionGroup>
@@ -111,7 +111,15 @@
     <FilesToPackage Include="$(TargetPath)" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="driver.c" />
+    <ClCompile Include="src/driver.c" />
+    <ClInclude Include="src/hook/greprotect.c" />
+    <ClInclude Include="src/hook/ntquery.c" />
+    <ClInclude Include="src/hooks.c" />
+    <ClInclude Include="src/hooks.h" />
+    <ClInclude Include="src/undoc.h" />
+    <ClInclude Include="src/utils.h" />
+    <ClInclude Include="src/var.c" />
+    <ClInclude Include="src/var.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".clang-format" />
