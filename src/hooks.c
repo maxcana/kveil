@@ -1,5 +1,6 @@
-#include <hook/ntquery.c>
 #include <hook/greprotect.c>
+#include <hook/ntquery.c>
+#include <ntddk.h>
 #include <utils.h>
 #include <var.h>
 
@@ -22,18 +23,28 @@ int jmp_hook(void* src, void* dest)
 
 int hook_all()
 {
-    print("hook_all()\n");
-    int fails = 0;
-    
-    print("hooking NtQuerySystemInformation...\n");
-    fails += jmp_hook(loc_NtQuerySystemInformation, hooked_NtQuerySystemInformation);
-    // print("hooking NtQuerySystemInformationEx...\n");
-    // fails += jmp_hook(loc_NtQuerySystemInformationEx, hooked_NtQuerySystemInformationEx);
+    print("hooking ntoskrnl!NtQuerySystemInformation...\n");
+    if (!jmp_hook(loc_NtQuerySystemInformation, hooked_NtQuerySystemInformation)) return 1;
 
-    // TODO this will probably not work. i think i need to be in session space for the right page tables, but idk.
-    print("hooking GreProtectSpriteContent...\n");
-    fails += jmp_hook(loc_GreProtectSpriteContent, hooked_GreProtectSpriteContent);
+    // i need to be in session space (session=1, not 0) so i have the right page tables to resolve win32kfull.sys
+    // see: https://github.com/GetRektBoy724/Win32kHooker/tree/master
+    {
+        print("getting session-specific page tables for hooking session-space drivers...\n");
+        DWORD ses1_pid = find_a_session1_process_pid();
+        if (ses1_pid == 0) return 1;
+        PEPROCESS ep;
+        if (!NT_SUCCESS(PsLookupProcessByProcessId(target_pid, &ep))) return 1;
 
-    print("hooks failed %d times.\n", fails);
-    return fails;
+        KAPC_STATE apc;
+        KeStackAttachProcess(ep, &apc); // now ffff9800'... resolves through session 1's tables
+        // perform session-1-dependent hooks
+        print("hooking win32kfull!GreProtectSpriteContent...\n");
+        if (!jmp_hook(loc_GreProtectSpriteContent, hooked_GreProtectSpriteContent)) return 1;
+
+        KeUnstackDetachProcess(&apc);
+        ObDereferenceObject(ep);
+    }
+
+    print("hooks all succeeded.\n", fails);
+    return 0;
 }

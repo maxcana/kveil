@@ -16,34 +16,46 @@ typedef NTSTATUS __fastcall ExpQuerySystemInformation_t(int32_t a1, struct _SYST
 // {
 //   return *(unsigned __int16 *)(a1 + 584);
 // }
-typedef USHORT __fastcall KeQueryPrimaryGroupThread(int64_t a1);
+typedef USHORT __fastcall KeQueryPrimaryGroupThread_t(int64_t a1);
+
+/**
+ * The NtQuerySystemInformation routine queries information about the system.
+ *
+ * \param SystemInformationClass The type of information to be retrieved.
+ * \param SystemInformation A pointer to a buffer that receives the requested information.
+ * \param SystemInformationLength The size of the buffer pointed to by SystemInformation.
+ * \param ReturnLength A pointer to a variable that receives the size of the data returned in the buffer.
+ * \return NTSTATUS Successful or errant status.
+ * \see https://learn.microsoft.com/en-us/windows/win32/sysinfo/zwquerysysteminformation
+ */
+typedef NTSTATUS NtQuerySystemInformation_t(uint32_t SystemInformationClass, void* SystemInformation, uint64_t SystemInformationLength, uint64_t* ReturnLength);
 
 // The SYSTEM_PROCESS_INFORMATION structure contains information about a process running on a system.
 // source: https://ntdoc.m417z.com/system_process_information
 _Struct_size_bytes_(NextEntryOffset) typedef struct _SYSTEM_PROCESS_INFORMATION
 {
-    ULONG NextEntryOffset;               // The address of the previous item plus the value in the NextEntryOffset member. For the last item in the array, NextEntryOffset is 0.
-    ULONG NumberOfThreads;               // The NumberOfThreads member contains the number of threads in the process.
-    ULONGLONG WorkingSetPrivateSize;     // The total private memory that a process currently has allocated and is physically resident in memory. // since VISTA
-    ULONG HardFaultCount;                // The total number of hard faults for data from disk rather than from in-memory pages. // since WIN7
-    ULONG NumberOfThreadsHighWatermark;  // The peak number of threads that were running at any given point in time, indicative of potential performance bottlenecks related to
-                                         // thread management.
-    ULONGLONG CycleTime;                 // The sum of the cycle time of all threads in the process.
-    LARGE_INTEGER CreateTime;            // Number of 100-nanosecond intervals since the creation time of the process. Not updated during system timezone changes.
-    LARGE_INTEGER UserTime;              // Number of 100-nanosecond intervals the process has executed in user mode.
-    LARGE_INTEGER KernelTime;            // Number of 100-nanosecond intervals the process has executed in kernel mode.
-    UNICODE_STRING ImageName;            // The file name of the executable image.
-    KPRIORITY BasePriority;              // The starting priority of the process.
-    HANDLE UniqueProcessId;              // The identifier of the process.
-    HANDLE InheritedFromUniqueProcessId; // The identifier of the process that created this process. Not updated and incorrectly refers to processes with recycled identifiers.
-    ULONG HandleCount;                   // The current number of open handles used by the process.
-    ULONG SessionId;                     // The identifier of the Remote Desktop Services session under which the specified process is running.
-    ULONG_PTR UniqueProcessKey;          // since VISTA (requires SystemExtendedProcessInformation)
-    SIZE_T PeakVirtualSize;              // The peak size, in bytes, of the virtual memory used by the process.
-    SIZE_T VirtualSize;                  // The current size, in bytes, of virtual memory used by the process.
-    ULONG PageFaultCount;                // The total number of page faults for data that is not currently in memory. The value wraps around to zero on average 24 hours.
-    SIZE_T PeakWorkingSetSize;           // The peak size, in kilobytes, of the working set of the process.
-    SIZE_T WorkingSetSize; // The number of pages visible to the process in physical memory. These pages are resident and available for use without triggering a page fault.
+    ULONG NextEntryOffset;                // The address of the previous item plus the value in the NextEntryOffset member. For the last item in the array, NextEntryOffset is 0.
+    ULONG NumberOfThreads;                // The NumberOfThreads member contains the number of threads in the process.
+    ULONGLONG WorkingSetPrivateSize;      // The total private memory that a process currently has allocated and is physically resident in memory. // since VISTA
+    ULONG HardFaultCount;                 // The total number of hard faults for data from disk rather than from in-memory pages. // since WIN7
+    ULONG NumberOfThreadsHighWatermark;   // The peak number of threads that were running at any given point in time, indicative of potential performance bottlenecks related to
+                                          // thread management.
+    ULONGLONG CycleTime;                  // The sum of the cycle time of all threads in the process.
+    LARGE_INTEGER CreateTime;             // Number of 100-nanosecond intervals since the creation time of the process. Not updated during system timezone changes.
+    LARGE_INTEGER UserTime;               // Number of 100-nanosecond intervals the process has executed in user mode.
+    LARGE_INTEGER KernelTime;             // Number of 100-nanosecond intervals the process has executed in kernel mode.
+    UNICODE_STRING ImageName;             // The file name of the executable image.
+    KPRIORITY BasePriority;               // The starting priority of the process.
+    HANDLE UniqueProcessId;               // The identifier of the process.
+    HANDLE InheritedFromUniqueProcessId;  // The identifier of the process that created this process. Not updated and incorrectly refers to processes with recycled identifiers.
+    ULONG HandleCount;                    // The current number of open handles used by the process.
+    ULONG SessionId;                      // The identifier of the Remote Desktop Services session under which the specified process is running.
+    ULONG_PTR UniqueProcessKey;           // since VISTA (requires SystemExtendedProcessInformation)
+    SIZE_T PeakVirtualSize;               // The peak size, in bytes, of the virtual memory used by the process.
+    SIZE_T VirtualSize;                   // The current size, in bytes, of virtual memory used by the process.
+    ULONG PageFaultCount;                 // The total number of page faults for data that is not currently in memory. The value wraps around to zero on average 24 hours.
+    SIZE_T PeakWorkingSetSize;            // The peak size, in kilobytes, of the working set of the process.
+    SIZE_T WorkingSetSize;                // The number of pages visible to the process in physical memory. These pages are resident and available for use without triggering a page fault.
     SIZE_T QuotaPeakPagedPoolUsage;       // The peak quota charged to the process for pool usage, in bytes.
     SIZE_T QuotaPagedPoolUsage;           // The quota charged to the process for paged pool usage, in bytes.
     SIZE_T QuotaPeakNonPagedPoolUsage;    // The peak quota charged to the process for nonpaged pool usage, in bytes.
@@ -82,7 +94,8 @@ _Struct_size_bytes_(NextEntryOffset) typedef struct _SYSTEM_BASICPROCESS_INFORMA
 
 // The SYSTEM_CODEINTEGRITY_INFORMATION structure contains the current Code Integrity policy options.
 // i think this one is pretty well-known
-typedef struct _SYSTEM_CODEINTEGRITY_INFORMATION {
+typedef struct _SYSTEM_CODEINTEGRITY_INFORMATION
+{
     ULONG Length;
     ULONG CodeIntegrityOptions;
 } SYSTEM_CODEINTEGRITY_INFORMATION, *PSYSTEM_CODEINTEGRITY_INFORMATION;

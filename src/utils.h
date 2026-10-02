@@ -117,3 +117,45 @@ void bsod()
     WdfVerifierKeBugCheck(0xE2, 0, 0, 0, 0);
     return;
 }
+
+
+// if it returns PID 0 (that's the System Idle Process; obviously a SessionId=0 process), we failed.
+// REQUIRES loc_NtQuerySystemInformation to be filled in; var.c must be initialized!!!!
+DWORD find_a_session1_process_pid()
+{
+    ULONG bufSize = 0;
+    NTSTATUS status;
+    PVOID result = NULL;
+
+    status = ZwQuerySystemInformation(0x5, NULL, 0, &bufSize);
+    if (status != STATUS_INFO_LENGTH_MISMATCH || bufSize == 0) return NULL;
+
+    PRTL_PROCESS_MODULES procs = (PRTL_PROCESS_MODULES)ExAllocatePool2(POOL_FLAG_NON_PAGED, bufSize, 'BOOM');
+    if (!procs) return NULL;
+
+    status = ZwQuerySystemInformation(0x5, procs, bufSize, &bufSize);
+    if (!NT_SUCCESS(status))
+    {
+        ExFreePoolWithTag(mods, 'BOOM');
+        return 0;
+    }
+
+    for (_SYSTEM_PROCESS_INFORMATION* p = procs;;)
+    {
+        // first SessionId 1 process (or other positive SessionId ig)
+        if (p->SessionId != 0)
+        {
+            DWORD pid = p->UniqueProcessId;
+            print("find_session1_process_pid: FOUND! %wZ, PID %d", p->ImageName, (uint32_t)pid);
+            ExFreePoolWithTag(mods, 'BOOM');
+            return pid;
+        }
+
+        if (!p->NextEntryOffset) break;
+        p = (_SYSTEM_PROCESS_INFORMATION*)((UCHAR*)p + p->NextEntryOffset);
+    }
+
+    // cleanup
+    ExFreePoolWithTag(mods, 'BOOM');
+    return 0;
+}

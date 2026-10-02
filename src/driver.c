@@ -15,8 +15,19 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING RegistryPath)
 {
     print("hello from kernel\n");
 
-    if (init_globals() != 0) return STATUS_UNSUCCESSFUL;
-    if (hook_all() != 0) return STATUS_UNSUCCESSFUL;
+    print("init_globals()\n");
+    if (init_globals() != 0)
+    {
+        print("init_globals failed\n");
+        return STATUS_UNSUCCESSFUL;
+    }
+
+    print("hook_all()\n");
+    if (hook_all() != 0)
+    {
+        print("hook_all failed\n");
+        return STATUS_UNSUCCESSFUL;
+    }
 
     WDF_DRIVER_CONFIG config;
     WDF_DRIVER_CONFIG_INIT(&config, on_device_added);

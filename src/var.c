@@ -16,7 +16,7 @@ static const UNICODE_STRING hidden_images[] = {
 
 int should_hide(UNICODE_STRING target)
 {
-    for (int i = 0; i < hidden_images_count; i++;)
+    for (int i = 0; i < hidden_images_count; i++)
     {
         if (RtlEqualUnicodeString(&target, &hidden_images[i], TRUE))
         {
@@ -32,7 +32,7 @@ int should_hide(UNICODE_STRING target)
 char* loc_ntoskrnl;
 char* loc_win32kfull;
 // whereable
-char* loc_NtQuerySystemInformation;
+NtQuerySystemInformation_t* loc_NtQuerySystemInformation;
 char* loc_NtQuerySystemInformationEx;
 // hardcoded
 ExpQuerySystemInformation_t* loc_ExpQuerySystemInformation;
@@ -40,12 +40,6 @@ KeQueryPrimaryGroupThread_t* loc_KeQueryPrimaryGroupThread;
 char* loc_GreProtectSpriteContent;
 
 //* # INTERNAL LOGIC
-
-(const wchar_t*)[] hidden_images = ((const wchar_t*)[]){
-    L"python.exe",
-    L"python3.exe",
-    L"pythonw.exe",
-};
 
 //* module bases
 static PVOID where_ntoskrnl()
@@ -60,20 +54,17 @@ static PVOID where_kernelmodule(PCSTR ModuleFileName)
     NTSTATUS status;
     PVOID result = NULL;
 
-    // First call gets the required buffer size
-    status = ZwQuerySystemInformation(SystemModuleInformation, NULL, 0, &bufSize);
+    // first call gets the required buffer size
+    status = ZwQuerySystemInformation(0xB, NULL, 0, &bufSize); // 0xB = SystemModuleInformation
     if (status != STATUS_INFO_LENGTH_MISMATCH || bufSize == 0) return NULL;
 
-    // Pad for TOCTOU; modules can load between the two calls
+    // pad for TOCTOU; modules can load between the two calls
     bufSize += sizeof(RTL_PROCESS_MODULE_INFORMATION) * 16;
 
     PRTL_PROCESS_MODULES mods = (PRTL_PROCESS_MODULES)ExAllocatePool2(POOL_FLAG_NON_PAGED, bufSize, 'BOOM');
-
     if (!mods) return NULL;
 
-    RtlZeroMemory(mods, bufSize);
-
-    status = ZwQuerySystemInformation(SystemModuleInformation, mods, bufSize, &bufSize);
+    status = ZwQuerySystemInformation(0xB, mods, bufSize, &bufSize);
     if (NT_SUCCESS(status))
     {
 
@@ -125,7 +116,7 @@ int init_globals()
     loc_win32kfull = (char*)where_kernelmodule("win32kfull.sys");
     if (loc_ntoskrnl == NULL || loc_win32kfull == NULL)
     {
-        print("failed to get bases of kernel modules. win32kfull only loads after you logged in. did you run the driver on boot (bad?\n");
+        print("failed to get bases of kernel modules. win32kfull only loads after you logged in. did you run the driver on boot (bad?)\n");
         return 1;
     }
 
@@ -152,7 +143,7 @@ int init_globals()
 ok:
 
     // populate whereable
-    loc_NtQuerySystemInformation = where(L"NtQuerySystemInformation");
+    loc_NtQuerySystemInformation = (NtQuerySystemInformation_t*)where(L"NtQuerySystemInformation");
     if (loc_NtQuerySystemInformation == NULL) return 1;
 
     loc_NtQuerySystemInformationEx = where(L"NtQuerySystemInformationEx");
