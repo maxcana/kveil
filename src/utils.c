@@ -68,6 +68,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 // copy memory even to write-protected regions
+// WARNING: if another CPU is currently executing inside those first 12 bytes, this MIGHT tear instructions?
 NTSTATUS kmemcpy(VOID UNALIGNED* Destination, CONST VOID UNALIGNED* Source, ULONG Length)
 {
     const KIRQL Irql = KeRaiseIrqlToDpcLevel();
@@ -111,7 +112,7 @@ void print(PCSTR format, ...)
 {
     va_list argList;
     va_start(argList, format);
-    vDbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_INFO_LEVEL, format, argList);
+    vDbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_WARNING_LEVEL, format, argList);
     va_end(argList);
     return;
 }
@@ -126,16 +127,19 @@ void bsod()
 // REQUIRES loc_NtQuerySystemInformation to be filled in; var.c must be initialized!!!!
 uint32_t find_a_session1_process_pid()
 {
-    uint64_t bufSize = 0;
+    uint64_t bufSize = 4096;
     NTSTATUS status;
 
-    status = loc_NtQuerySystemInformation(0x5, NULL, 0, &bufSize);
-    if (status != STATUS_INFO_LENGTH_MISMATCH || bufSize == 0) return NULL;
+    void* procs = NULL;
+    do
+    {
+        if (procs != NULL) ExFreePoolWithTag(procs, 'BOOM');
+        procs = ExAllocatePool2(POOL_FLAG_NON_PAGED, bufSize, 'BOOM');
+        if (procs == NULL) return 0;
+        status = loc_NtQuerySystemInformation(0x5, procs, bufSize, &bufSize);
+    }
+    while (status == STATUS_INFO_LENGTH_MISMATCH);
 
-    void* procs = ExAllocatePool2(POOL_FLAG_NON_PAGED, bufSize, 'BOOM');
-    if (!procs) return NULL;
-
-    status = loc_NtQuerySystemInformation(0x5, procs, bufSize, &bufSize);
     if (!NT_SUCCESS(status))
     {
         ExFreePoolWithTag(procs, 'BOOM');
@@ -148,7 +152,7 @@ uint32_t find_a_session1_process_pid()
         if (p->SessionId != 0)
         {
             uint32_t pid = p->UniqueProcessId;
-            print("find_session1_process_pid: FOUND! %wZ, PID %d", p->ImageName, (uint32_t)pid);
+            print("find_session1_process_pid: FOUND! %wZ, PID %d", &p->ImageName, (uint32_t)pid);
             ExFreePoolWithTag(procs, 'BOOM');
             return pid;
         }

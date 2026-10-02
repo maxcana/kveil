@@ -116,10 +116,10 @@ int init_globals()
 {
     // populate whereable (need to do first)
     loc_NtQuerySystemInformation = (NtQuerySystemInformation_t*)where(L"NtQuerySystemInformation");
-    if (loc_NtQuerySystemInformation == NULL) return 1;
+    if (loc_NtQuerySystemInformation == NULL) return 0;
 
     loc_NtQuerySystemInformationEx = where(L"NtQuerySystemInformationEx");
-    if (loc_NtQuerySystemInformationEx == NULL) return 1;
+    if (loc_NtQuerySystemInformationEx == NULL) return 0;
 
     // populate modules
     loc_ntoskrnl = (char*)where_ntoskrnl();
@@ -127,7 +127,7 @@ int init_globals()
     if (loc_ntoskrnl == NULL || loc_win32kfull == NULL)
     {
         print("failed to get bases of kernel modules. win32kfull only loads after you logged in. did you run the driver on boot (bad?)\n");
-        return 1;
+        return 0;
     }
 
     // populate hardcoded
@@ -145,9 +145,9 @@ int init_globals()
             loc_GreProtectSpriteContent = (char*)((uint64_t)loc_win32kfull + (uint64_t)ko.GreProtectSpriteContent);
 
             print("loaded hardcoded offsets {0x%X, 0x%X} for win11 build %d\n", loc_ExpQuerySystemInformation, loc_GreProtectSpriteContent, build);
-            return 0;
+            return 1;
         }
     }
     print("ERROR your win11 version (%d) is missing hardcoded offsets, go mine the offsets\n", build);
-    return 1;
+    return 0;
 }

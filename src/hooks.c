@@ -19,13 +19,13 @@ int jmp_hook(void* src, void* dest)
     memcpy(&bytes[2], &dest, sizeof(void*));
     NTSTATUS ok = kmemcpy(src, bytes, 12);
 
-    return ok == STATUS_SUCCESS ? 0 : 1;
+    return ok == STATUS_SUCCESS ? 1 : 0;
 }
 
 int hook_all()
 {
     print("hooking ntoskrnl!NtQuerySystemInformation...\n");
-    if (!jmp_hook(loc_NtQuerySystemInformation, hooked_NtQuerySystemInformation)) return 1;
+    if (jmp_hook(loc_NtQuerySystemInformation, hooked_NtQuerySystemInformation) == 0) return 0;
 
     // i need to be in session space (session=1, not 0) so i have the right page tables to resolve win32kfull.sys
     // see: https://github.com/GetRektBoy724/Win32kHooker/tree/master
@@ -40,12 +40,12 @@ int hook_all()
         KeStackAttachProcess(ep, &apc); // now ffff9800'... resolves through session 1's tables
         // perform session-1-dependent hooks
         print("hooking win32kfull!GreProtectSpriteContent...\n");
-        if (!jmp_hook(loc_GreProtectSpriteContent, hooked_GreProtectSpriteContent)) return 1;
+        if (jmp_hook(loc_GreProtectSpriteContent, hooked_GreProtectSpriteContent) == 0) return 0;
 
         KeUnstackDetachProcess(&apc);
         ObDereferenceObject(ep);
     }
 
     print("hooks all succeeded.\n");
-    return 0;
+    return 1;
 }
