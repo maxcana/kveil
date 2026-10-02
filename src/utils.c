@@ -117,9 +117,10 @@ void print(PCSTR format, ...)
     return;
 }
 
-void bsod()
+// BugCheckCode = 0xE2 recommended
+void bsod(ULONG BugCheckCode)
 {
-    WdfVerifierKeBugCheck(0xE2, 0, 0, 0, 0);
+    WdfVerifierKeBugCheck(BugCheckCode, 0, 0, 0, 0);
     return;
 }
 
