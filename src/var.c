@@ -3,15 +3,18 @@
 #include <string.h>
 #include <undoc.h>
 #include <utils.h>
+#include <stdint.h>
 
 //* # EXPORTS
 
 //* ## Values
+#define CONST_USTR(s) {sizeof(s) - sizeof(WCHAR), sizeof(s), (PWSTR)(s)}
+
 static const uint64_t hidden_images_count = 3; // c has no array.length kek
 static const UNICODE_STRING hidden_images[] = {
-    RTL_CONSTANT_STRING(L"python.exe"),
-    RTL_CONSTANT_STRING(L"python3.exe"),
-    RTL_CONSTANT_STRING(L"pythonw.exe"),
+    CONST_USTR(L"python.exe"),
+    CONST_USTR(L"python3.exe"),
+    CONST_USTR(L"pythonw.exe"),
 };
 
 int should_hide(UNICODE_STRING target)
@@ -55,7 +58,7 @@ static PVOID where_kernelmodule(PCSTR ModuleFileName)
     PVOID result = NULL;
 
     // first call gets the required buffer size
-    status = ZwQuerySystemInformation(0xB, NULL, 0, &bufSize); // 0xB = SystemModuleInformation
+    status = loc_NtQuerySystemInformation(0xB, NULL, 0, &bufSize); // 0xB = SystemModuleInformation
     if (status != STATUS_INFO_LENGTH_MISMATCH || bufSize == 0) return NULL;
 
     // pad for TOCTOU; modules can load between the two calls
@@ -64,7 +67,7 @@ static PVOID where_kernelmodule(PCSTR ModuleFileName)
     PRTL_PROCESS_MODULES mods = (PRTL_PROCESS_MODULES)ExAllocatePool2(POOL_FLAG_NON_PAGED, bufSize, 'BOOM');
     if (!mods) return NULL;
 
-    status = ZwQuerySystemInformation(0xB, mods, bufSize, &bufSize);
+    status = loc_NtQuerySystemInformation(0xB, mods, bufSize, &bufSize);
     if (NT_SUCCESS(status))
     {
 
@@ -76,7 +79,7 @@ static PVOID where_kernelmodule(PCSTR ModuleFileName)
             // so mod->FullPathName + mod->OffsetToFileName == "win32kfull.sys"
             PCSTR leaf = (PCSTR)mod->FullPathName + mod->OffsetToFileName;
 
-            if (stricmp(leaf, ModuleFileName) == 0)
+            if (_stricmp(leaf, ModuleFileName) == 0)
             {
                 result = mod->ImageBase; // Runtime VA like 0xFFFFF87A00000000
                 break;
@@ -111,6 +114,13 @@ static const KveilOffsets hardcoded_offsets[] = {
 //* init
 int init_globals()
 {
+    // populate whereable (need to do first)
+    loc_NtQuerySystemInformation = (NtQuerySystemInformation_t*)where(L"NtQuerySystemInformation");
+    if (loc_NtQuerySystemInformation == NULL) return 1;
+
+    loc_NtQuerySystemInformationEx = where(L"NtQuerySystemInformationEx");
+    if (loc_NtQuerySystemInformationEx == NULL) return 1;
+
     // populate modules
     loc_ntoskrnl = (char*)where_ntoskrnl();
     loc_win32kfull = (char*)where_kernelmodule("win32kfull.sys");
@@ -125,7 +135,7 @@ int init_globals()
     RtlGetVersion(&osvi);
     uint64_t build = osvi.dwBuildNumber;
 
-    for (int i = 0; i < hardcoded_offsets.length; i++)
+    for (int i = 0; i < ARRAYSIZE(hardcoded_offsets); i++)
     {
         KveilOffsets ko = hardcoded_offsets[i];
         if (build == ko.win11_build_number)
@@ -135,19 +145,9 @@ int init_globals()
             loc_GreProtectSpriteContent = (char*)((uint64_t)loc_win32kfull + (uint64_t)ko.GreProtectSpriteContent);
 
             print("loaded hardcoded offsets {0x%X, 0x%X} for win11 build %d\n", loc_ExpQuerySystemInformation, loc_GreProtectSpriteContent, build);
-            goto ok;
+            return 0;
         }
     }
     print("ERROR your win11 version (%d) is missing hardcoded offsets, go mine the offsets\n", build);
     return 1;
-ok:
-
-    // populate whereable
-    loc_NtQuerySystemInformation = (NtQuerySystemInformation_t*)where(L"NtQuerySystemInformation");
-    if (loc_NtQuerySystemInformation == NULL) return 1;
-
-    loc_NtQuerySystemInformationEx = where(L"NtQuerySystemInformationEx");
-    if (loc_NtQuerySystemInformationEx == NULL) return 1;
-
-    return 0;
 }

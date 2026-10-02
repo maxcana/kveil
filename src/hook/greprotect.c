@@ -3,6 +3,7 @@
 #include <utils.h>
 #include <var.h>
 #include <wdm.h>
+#include <stdint.h>
 
 uint64_t hooked_GreProtectSpriteContent(uint64_t gre_context, PVOID hwnd, int use_dwm_path, uint8_t new_affinity)
 {

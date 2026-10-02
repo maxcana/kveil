@@ -1,8 +1,9 @@
-#include <hooks.h>
 #include <ntddk.h>
+#include <hooks.h>
 #include <utils.h>
 #include <var.h>
 #include <wdf.h>
+#include <stdint.h>
 
 NTSTATUS on_device_added(WDFDRIVER Driver, PWDFDEVICE_INIT DeviceInit)
 {

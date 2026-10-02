@@ -35,6 +35,8 @@
     <ConfigurationType>Driver</ConfigurationType>
     <DriverType>KMDF</DriverType>
     <DriverTargetPlatform>Universal</DriverTargetPlatform>
+    <KMDF_VERSION_MINOR>35</KMDF_VERSION_MINOR>
+    <KMDF_VERSION_MAJOR>1</KMDF_VERSION_MAJOR>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <TargetVersion>Windows10</TargetVersion>
@@ -70,15 +72,19 @@
   <PropertyGroup />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <DriverSign>
@@ -88,11 +94,21 @@
       <AdditionalIncludeDirectories>C:\Program Files (x86)\Windows Kits\10\Include\10.0.28000.0\km;C:\Program Files (x86)\Windows Kits\10\Include\wdf\kmdf\1.35;$(ProjectDir)src;$(ProjectDir)src/hook;</AdditionalIncludeDirectories>
       <TreatWarningAsError>false</TreatWarningAsError>
     </ClCompile>
+    <Link>
+      <TreatLinkerWarningAsErrors>false</TreatLinkerWarningAsErrors>
+    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <DriverSign>
       <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
     </DriverSign>
+    <ClCompile>
+      <AdditionalIncludeDirectories>C:\Program Files (x86)\Windows Kits\10\Include\10.0.28000.0\km;C:\Program Files (x86)\Windows Kits\10\Include\wdf\kmdf\1.35;$(ProjectDir)src;$(ProjectDir)src/hook;</AdditionalIncludeDirectories>
+      <TreatWarningAsError>false</TreatWarningAsError>
+    </ClCompile>
+    <Link>
+      <TreatLinkerWarningAsErrors>false</TreatLinkerWarningAsErrors>
+    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
     <DriverSign>
@@ -112,14 +128,15 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src/driver.c" />
-    <ClInclude Include="src/hook/greprotect.c" />
-    <ClInclude Include="src/hook/ntquery.c" />
-    <ClInclude Include="src/hooks.c" />
+    <ClCompile Include="src/hook/greprotect.c" />
+    <ClCompile Include="src/hook/ntquery.c" />
+    <ClCompile Include="src/hooks.c" />
     <ClInclude Include="src/hooks.h" />
     <ClInclude Include="src/undoc.h" />
+    <ClCompile Include="src/utils.c" />
     <ClInclude Include="src/utils.h" />
-    <ClInclude Include="src/var.c" />
-    <ClInclude Include="src/var.h" />
+    <ClCompile Include="src/var.c" />
+    <ClCompile Include="src/var.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".clang-format" />

@@ -1,8 +1,9 @@
-#include <hook/greprotect.c>
-#include <hook/ntquery.c>
-#include <ntddk.h>
+#include <ntifs.h>
+#include <stdint.h>
 #include <utils.h>
 #include <var.h>
+uint64_t hooked_GreProtectSpriteContent(uint64_t gre_context, PVOID hwnd, int use_dwm_path, uint8_t new_affinity);
+NTSTATUS __fastcall hooked_NtQuerySystemInformation(int32_t SystemInformationClass, uint64_t* SystemInformation, uint32_t SystemInformationLength, uint32_t* ReturnLength);
 
 // naked mov rax, imm64; jmp rax. does not push/pop the original value of rax. as long as we don't hook a *variadic* function, this is fine per the Win64 ABI.
 int jmp_hook(void* src, void* dest)
@@ -30,10 +31,10 @@ int hook_all()
     // see: https://github.com/GetRektBoy724/Win32kHooker/tree/master
     {
         print("getting session-specific page tables for hooking session-space drivers...\n");
-        DWORD ses1_pid = find_a_session1_process_pid();
+        uint32_t ses1_pid = find_a_session1_process_pid();
         if (ses1_pid == 0) return 1;
         PEPROCESS ep;
-        if (!NT_SUCCESS(PsLookupProcessByProcessId(target_pid, &ep))) return 1;
+        if (!NT_SUCCESS(PsLookupProcessByProcessId(ses1_pid, &ep))) return 1;
 
         KAPC_STATE apc;
         KeStackAttachProcess(ep, &apc); // now ffff9800'... resolves through session 1's tables
@@ -45,6 +46,6 @@ int hook_all()
         ObDereferenceObject(ep);
     }
 
-    print("hooks all succeeded.\n", fails);
+    print("hooks all succeeded.\n");
     return 0;
 }

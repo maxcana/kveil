@@ -1,3 +1,7 @@
+#pragma once
+#include <stdint.h>
+#include <undoc.h>
+
 //* # EXPORTS
 
 //* ## Values
@@ -10,7 +14,7 @@ int should_hide(UNICODE_STRING target);
 char* loc_ntoskrnl;
 char* loc_win32kfull;
 // whereable
-char* loc_NtQuerySystemInformation;
+NtQuerySystemInformation_t* loc_NtQuerySystemInformation;
 char* loc_NtQuerySystemInformationEx;
 // hardcoded
 ExpQuerySystemInformation_t* loc_ExpQuerySystemInformation;

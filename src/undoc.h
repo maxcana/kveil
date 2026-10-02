@@ -1,14 +1,18 @@
+#pragma once
+#include <aux_klib.h>
 #include <ntddk.h>
 #include <sal.h>
+#include <stdint.h>
 #include <string.h>
 #include <utils.h>
 
-static NTKERNELAPI PVOID RtlPcToFileHeader(PVOID PcValue, PVOID* BaseOfImage);
+NTKERNELAPI PVOID NTAPI RtlPcToFileHeader(_In_ PVOID PcValue, _Out_ PVOID* BaseOfImage);
 
 // original from decompilation:
 // NTSTATUS __fastcall ExpQuerySystemInformation(int a1, struct _SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX* a2, unsigned int a3, _QWORD* a4, unsigned
 // int Length, ULONG* a6)
 
+// note: __fastcall and __stdcall etc does absolutely nothing on MSVC x64 builds
 typedef NTSTATUS __fastcall ExpQuerySystemInformation_t(int32_t a1, struct _SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX* a2, uint32_t a3, uint64_t* a4, uint32_t Length, uint32_t* a6);
 
 // original from decompilation; wait, it literally just adds 584 to it. but idk of this changes depending on windows version:
@@ -29,6 +33,41 @@ typedef USHORT __fastcall KeQueryPrimaryGroupThread_t(int64_t a1);
  * \see https://learn.microsoft.com/en-us/windows/win32/sysinfo/zwquerysysteminformation
  */
 typedef NTSTATUS NtQuerySystemInformation_t(uint32_t SystemInformationClass, void* SystemInformation, uint64_t SystemInformationLength, uint64_t* ReturnLength);
+
+// thx ntdoc
+// dont need this but i need it for other definitions below
+typedef enum _KTHREAD_STATE
+{
+    Initialized,
+    Ready,
+    Running,
+    Standby,
+    Terminated,
+    Waiting,
+    Transition,
+    DeferredReady,
+    GateWaitObsolete,
+    WaitingForProcessInSwap,
+    MaximumThreadState
+} KTHREAD_STATE, *PKTHREAD_STATE;
+
+// also dont need this
+// The SYSTEM_THREAD_INFORMATION structure contains information about a thread running on a system.
+// https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-tsts/e82d73e4-cedb-4077-9099-d58f3459722f
+typedef struct _SYSTEM_THREAD_INFORMATION
+{
+    LARGE_INTEGER KernelTime;  // Number of 100-nanosecond intervals spent executing kernel code.
+    LARGE_INTEGER UserTime;    // Number of 100-nanosecond intervals spent executing user code.
+    LARGE_INTEGER CreateTime;  // The date and time when the thread was created.
+    ULONG WaitTime;            // The current time spent in ready queue or waiting (depending on the thread state).
+    PVOID StartAddress;        // The initial start address of the thread.
+    CLIENT_ID ClientId;        // The identifier of the thread and the process owning the thread.
+    KPRIORITY Priority;        // The dynamic priority of the thread.
+    KPRIORITY BasePriority;    // The starting priority of the thread.
+    ULONG ContextSwitches;     // The total number of context switches performed.
+    KTHREAD_STATE ThreadState; // The current state of the thread.
+    KWAIT_REASON WaitReason;   // The current reason the thread is waiting.
+} SYSTEM_THREAD_INFORMATION, *PSYSTEM_THREAD_INFORMATION;
 
 // The SYSTEM_PROCESS_INFORMATION structure contains information about a process running on a system.
 // source: https://ntdoc.m417z.com/system_process_information
@@ -99,3 +138,24 @@ typedef struct _SYSTEM_CODEINTEGRITY_INFORMATION
     ULONG Length;
     ULONG CodeIntegrityOptions;
 } SYSTEM_CODEINTEGRITY_INFORMATION, *PSYSTEM_CODEINTEGRITY_INFORMATION;
+
+// Module information
+typedef struct _RTL_PROCESS_MODULE_INFORMATION
+{
+    PVOID Section;
+    PVOID MappedBase;
+    PVOID ImageBase;
+    ULONG ImageSize;
+    ULONG Flags;
+    USHORT LoadOrderIndex;
+    USHORT InitOrderIndex;
+    USHORT LoadCount;
+    USHORT OffsetToFileName;
+    UCHAR FullPathName[256];
+} RTL_PROCESS_MODULE_INFORMATION, *PRTL_PROCESS_MODULE_INFORMATION;
+
+typedef struct _RTL_PROCESS_MODULES
+{
+    ULONG NumberOfModules;
+    _Field_size_(NumberOfModules) RTL_PROCESS_MODULE_INFORMATION Modules[1];
+} RTL_PROCESS_MODULES, *PRTL_PROCESS_MODULES;
