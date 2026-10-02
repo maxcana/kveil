@@ -142,11 +142,17 @@ int init_globals()
         KveilOffsets ko = hardcoded_offsets[i];
         if (build == ko.win11_build_number)
         {
+            print("loading hardcoded offsets for win11 build %d...\n", build);
+
             loc_ExpQuerySystemInformation = (ExpQuerySystemInformation_t*)((uint64_t)loc_ntoskrnl + (uint64_t)ko.ExpQuerySystemInformation);
             loc_KeQueryPrimaryGroupThread = (KeQueryPrimaryGroupThread_t*)((uint64_t)loc_ntoskrnl + (uint64_t)ko.KeQueryPrimaryGroupThread);
             loc_GreProtectSpriteContent = (char*)((uint64_t)loc_win32kfull + (uint64_t)ko.GreProtectSpriteContent);
 
-            print("loaded hardcoded offsets {0x%X, 0x%X} for win11 build %d\n", loc_ExpQuerySystemInformation, loc_GreProtectSpriteContent, build);
+            print("ntoskrnl!ExpQuerySystemInformation@0x%I64X\n", loc_ExpQuerySystemInformation);
+            print("ntoskrnl!KeQueryPrimaryGroupThread@0x%I64X\n", loc_KeQueryPrimaryGroupThread);
+            print("win32kfull!GreProtectSpriteContent@0x%I64X\n", loc_GreProtectSpriteContent);
+            
+            print("finished loading hardcoded offsets!\n", build);
             return 1;
         }
     }

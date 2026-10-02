@@ -1,0 +1,201 @@
+Loading Dump File [C:\Windows\Minidump\100226-4546-01.dmp]
+Mini Kernel Dump File: Only registers and stack trace are available
+
+WARNING: TriageDumpDataExtArray.HeaderSize is 0
+WARNING: Failed to read dump data exension data
+Symbol search path is: srv*
+Executable search path is: 
+Windows 10 Kernel Version 26100 MP (4 procs) Free x64
+Product: WinNt, suite: TerminalServer SingleUserTS Personal
+Kernel base = 0xfffff805`91200000 PsLoadedModuleList = 0xfffff805`920f5410
+Debug session time: Fri Oct  2 00:32:50.760 2026 (UTC - 7:00)
+System Uptime: 0 days 2:10:21.378
+Loading Kernel Symbols
+...............................................................
+................................................................
+.................................................
+Loading User Symbols
+
+Loading unloaded module list
+..........
+For analysis of this file, run !analyze -v
+2: kd> !dbgprint
+Can't find DbgPrint buffer
+2: kd> !analyze -v
+Loading Kernel Symbols
+...............................................................
+................................................................
+.................................................
+Loading User Symbols
+
+Loading unloaded module list
+..........
+*******************************************************************************
+*                                                                             *
+*                        Bugcheck Analysis                                    *
+*                                                                             *
+*******************************************************************************
+
+PAGE_FAULT_IN_NONPAGED_AREA (50)
+Invalid system memory was referenced.  This cannot be protected by try-except.
+Typically the address is just plain bad or it is pointing at freed memory.
+Arguments:
+Arg1: fffff80591c06e00, memory referenced.
+Arg2: 0000000000000003, X64: bit 0 set if the fault was due to a not-present PTE.
+	bit 1 is set if the fault was due to a write, clear if a read.
+	bit 3 is set if the processor decided the fault was due to a corrupted PTE.
+	bit 4 is set if the fault was due to attempted execute of a no-execute PTE.
+	- ARM64: bit 1 is set if the fault was due to a write, clear if a read.
+	bit 3 is set if the fault was due to attempted execute of a no-execute PTE.
+Arg3: fffff80591c06e0b, If non-zero, the instruction address which referenced the bad memory
+	address.
+Arg4: 0000000000000002, (reserved)
+
+Debugging Details:
+------------------
+
+
+KEY_VALUES_STRING: 1
+
+    Key  : AV.PTE
+    Value: Valid
+
+    Key  : AV.Type
+    Value: Write
+
+    Key  : Analysis.CPU.mSec
+    Value: 1343
+
+    Key  : Analysis.Elapsed.mSec
+    Value: 3961
+
+    Key  : Analysis.IO.Other.Mb
+    Value: 3
+
+    Key  : Analysis.IO.Read.Mb
+    Value: 1
+
+    Key  : Analysis.IO.Write.Mb
+    Value: 24
+
+    Key  : Analysis.Init.CPU.mSec
+    Value: 2875
+
+    Key  : Analysis.Init.Elapsed.mSec
+    Value: 52801
+
+    Key  : Analysis.Memory.CommitPeak.Mb
+    Value: 90
+
+    Key  : Analysis.Version.DbgEng
+    Value: 10.0.28000.2705
+
+    Key  : Analysis.Version.Description
+    Value: 10.2506.23.01 amd64fre
+
+    Key  : Analysis.Version.Ext
+    Value: 1.2506.23.1
+
+    Key  : Bugcheck.Code.LegacyAPI
+    Value: 0x50
+
+    Key  : Bugcheck.Code.TargetModel
+    Value: 0x50
+
+    Key  : Dump.Attributes.AsUlong
+    Value: 0x20008
+
+    Key  : Dump.Attributes.KernelGeneratedTriageDump
+    Value: 1
+
+    Key  : Failure.Bucket
+    Value: AV_W_(null)_nt!ExpQuerySystemInformation
+
+    Key  : Failure.Exception.IP.Address
+    Value: 0xfffff80591c06e0b
+
+    Key  : Failure.Exception.IP.Module
+    Value: nt
+
+    Key  : Failure.Exception.IP.Offset
+    Value: 0xa06e0b
+
+    Key  : Failure.Hash
+    Value: {82...41}
+
+
+BUGCHECK_CODE:  50
+
+BUGCHECK_P1: fffff80591c06e00
+
+BUGCHECK_P2: 3
+
+BUGCHECK_P3: fffff80591c06e0b
+
+BUGCHECK_P4: 2
+
+FILE_IN_CAB:  100226-4546-01.dmp
+
+DUMP_FILE_ATTRIBUTES: 0x20008
+  Kernel Generated Triage Dump
+
+FAULTING_THREAD:  ffff9905ae799040
+
+WRITE_ADDRESS: fffff805921c54d8: Unable to get MiVisibleState
+Unable to get NonPagedPoolStart
+Unable to get NonPagedPoolEnd
+Unable to get PagedPoolStart
+Unable to get PagedPoolEnd
+unable to get nt!MmSpecialPagesInUse
+ fffff80591c06e00 
+
+MM_INTERNAL_CODE:  2
+
+BLACKBOXBSD: 1 (!blackboxbsd)
+
+
+BLACKBOXNTFS: 1 (!blackboxntfs)
+
+
+BLACKBOXPNP: 1 (!blackboxpnp)
+
+
+BLACKBOXWINLOGON: 1 (!blackboxwinlogon)
+
+
+CUSTOMER_CRASH_COUNT:  1
+
+PROCESS_NAME:  System
+
+STACK_TEXT:  
+fffff480`076cf048 fffff805`915c8a75     : 00000000`00000050 fffff805`91c06e00 00000000`00000003 fffff480`076cf2b0 : nt!KeBugCheckEx
+fffff480`076cf050 fffff805`914961e6     : 00000000`00000000 ffff8000`00000000 fffff805`91c06e00 0000007f`fffffff8 : nt!MiSystemFault+0x661
+fffff480`076cf140 fffff805`918bd8cb     : ffff9905`a0100000 00000000`00000040 ffff9905`a817dac0 00000000`00000000 : nt!MmAccessFault+0x646
+fffff480`076cf2b0 fffff805`91c06e0b     : fffff805`27f2120a 00000000`00000000 00000000`00000000 00000000`fffffffc : nt!KiPageFault+0x38b
+fffff480`076cf448 00000000`0000000c     : fffff805`916fdfd5 00000000`00000000 00000000`fffffffd fffff480`076cf4b8 : nt!ExpQuerySystemInformation+0x13
+fffff480`076cf488 fffff805`916fdfd5     : 00000000`00000000 00000000`fffffffd fffff480`076cf4b8 00000000`00000018 : 0xc
+fffff480`076cf490 00000000`00000000     : 00000000`fffffffd fffff480`076cf4b8 00000000`00000018 00000000`00000000 : nt!DebugPrintAfterInt3
+
+
+SYMBOL_NAME:  nt!ExpQuerySystemInformation+13
+
+MODULE_NAME: nt
+
+IMAGE_NAME:  ntkrnlmp.exe
+
+IMAGE_VERSION:  10.0.26100.9457
+
+STACK_COMMAND: .process /r /p 0xffff9905a06a3040; .thread 0xffff9905ae799040 ; kb
+
+BUCKET_ID_FUNC_OFFSET:  13
+
+FAILURE_BUCKET_ID:  AV_W_(null)_nt!ExpQuerySystemInformation
+
+OSPLATFORM_TYPE:  x64
+
+OSNAME:  Windows 10
+
+FAILURE_ID_HASH:  {82...41}
+
+Followup:     MachineOwner
+---------
