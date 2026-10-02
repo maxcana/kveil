@@ -112,7 +112,7 @@ void print(PCSTR format, ...)
 {
     va_list argList;
     va_start(argList, format);
-    vDbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_WARNING_LEVEL, format, argList);
+    vDbgPrintEx(DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, format, argList);
     va_end(argList);
     return;
 }

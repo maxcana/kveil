@@ -49,7 +49,7 @@ static PVOID where_ntoskrnl()
 {
     PVOID base = NULL;
     RtlPcToFileHeader((PVOID)ExAllocatePoolWithTag, &base);
-    print("found ntoskrnl @ 0x%X\n", (uint64_t)base);
+    print("found ntoskrnl @ 0x%I64X\n", (uint64_t)base);
     return base;
 }
 static PVOID where_kernelmodule(PCSTR ModuleFileName)
@@ -82,8 +82,9 @@ static PVOID where_kernelmodule(PCSTR ModuleFileName)
             if (_stricmp(leaf, ModuleFileName) == 0)
             {
                 // Runtime VA like 0xFFFFF87A00000000
-                print("found %s @ 0x%X\n", ModuleFileName, (uint64_t)mod->ImageBase);
-                break;
+                print("found %s @ 0x%I64X\n", ModuleFileName, (uint64_t)mod->ImageBase);
+                ExFreePoolWithTag(mods, 'BOOM');
+                return mod->ImageBase;
             }
         }
     }

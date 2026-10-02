@@ -249,7 +249,7 @@ NTSTATUS __fastcall hooked_NtQuerySystemInformation(int32_t SystemInformationCla
             // 0x0020: TEST_BUILD: Indicates the OS itself is a Microsoft-internal test build.
             // 0x0040: PREPRODUCTION_BUILD: A pre-release internal Windows. Also not a retail OS.
             // 0x0080: DEBUGMODE_ENABLED: bcdedit /debug on
-            // 0x0100: FLIGHT_BUILD: The machine is running a Windows Insider preview (less stable). Vanguard blocks you if this is on.
+            // 0x0100: FLIGHT_BUILD: The machine is running a Windows Insider preview (less stable). Something like Vanguard blocks you if this is on.
             // 0x0200: FLIGHTING_ENABLED: Same as above.
             // 0x0400: HVCI_KMCI_ENABLED: HVCI is on.
             // 0x0800: HVCI_KMCI_AUDITMODE_ENABLED: HVCI isn't really on, it just logs violations but doesn't block them.
