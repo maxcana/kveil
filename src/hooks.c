@@ -32,15 +32,24 @@ int hook_all()
     {
         print("getting session-specific page tables for hooking session-space drivers...\n");
         uint32_t ses1_pid = find_a_session1_process_pid();
-        if (ses1_pid == 0) return 1;
+        if (ses1_pid == 0)
+        {
+            print("failed to find a session 1 PID.\n");
+            return 0;
+        }
         PEPROCESS ep;
-        if (!NT_SUCCESS(PsLookupProcessByProcessId(ses1_pid, &ep))) return 1;
+        if (!NT_SUCCESS(PsLookupProcessByProcessId(ses1_pid, &ep))) return 0;
 
         KAPC_STATE apc;
         KeStackAttachProcess(ep, &apc); // now ffff9800'... resolves through session 1's tables
         // perform session-1-dependent hooks
         print("hooking win32kfull!GreProtectSpriteContent...\n");
-        if (jmp_hook(loc_GreProtectSpriteContent, hooked_GreProtectSpriteContent) == 0) return 0;
+        if (jmp_hook(loc_GreProtectSpriteContent, hooked_GreProtectSpriteContent) == 0)
+        {
+            KeUnstackDetachProcess(&apc);
+            ObDereferenceObject(ep);
+            return 0;
+        }
 
         KeUnstackDetachProcess(&apc);
         ObDereferenceObject(ep);

@@ -22,23 +22,23 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING RegistryPath)
 {
     print("hello from kernel\n");
 
-    DriverObject->DriverUnload = driver_unload;
+    // DriverObject->DriverUnload = driver_unload;
 
     print("init_globals()\n");
     if (init_globals() == 0)
     {
         print("init_globals failed\n");
-        return STATUS_UNSUCCESSFUL;
+        return STATUS_SUCCESS;
     }
 
     print("hook_all()\n");
     if (hook_all() == 0)
     {
         print("hook_all failed\n");
-        return STATUS_UNSUCCESSFUL;
+        return STATUS_SUCCESS;
     }
 
-    return STATUS_UNSUCCESSFUL;
+    return STATUS_SUCCESS;
     // WDF_DRIVER_CONFIG config;
     // WDF_DRIVER_CONFIG_INIT(&config, on_device_added);
 

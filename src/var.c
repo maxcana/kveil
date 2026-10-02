@@ -1,9 +1,9 @@
 // var.c: contains global values or offsets; initialized once on load
 #include <ntddk.h>
+#include <stdint.h>
 #include <string.h>
 #include <undoc.h>
 #include <utils.h>
-#include <stdint.h>
 
 //* # EXPORTS
 
@@ -49,13 +49,13 @@ static PVOID where_ntoskrnl()
 {
     PVOID base = NULL;
     RtlPcToFileHeader((PVOID)ExAllocatePoolWithTag, &base);
+    print("found ntoskrnl @ 0x%X\n", (uint64_t)base);
     return base;
 }
 static PVOID where_kernelmodule(PCSTR ModuleFileName)
 {
     ULONG bufSize = 0;
     NTSTATUS status;
-    PVOID result = NULL;
 
     // first call gets the required buffer size
     status = loc_NtQuerySystemInformation(0xB, NULL, 0, &bufSize); // 0xB = SystemModuleInformation
@@ -81,7 +81,8 @@ static PVOID where_kernelmodule(PCSTR ModuleFileName)
 
             if (_stricmp(leaf, ModuleFileName) == 0)
             {
-                result = mod->ImageBase; // Runtime VA like 0xFFFFF87A00000000
+                // Runtime VA like 0xFFFFF87A00000000
+                print("found %s @ 0x%X\n", ModuleFileName, (uint64_t)mod->ImageBase);
                 break;
             }
         }
@@ -89,7 +90,7 @@ static PVOID where_kernelmodule(PCSTR ModuleFileName)
 
     // cleanup
     ExFreePoolWithTag(mods, 'BOOM');
-    return result;
+    return NULL;
 }
 
 //* hardcoding
