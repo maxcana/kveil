@@ -132,6 +132,8 @@
     <ClCompile Include="src/hook/ntquery.c" />
     <ClCompile Include="src/hooks.c" />
     <ClInclude Include="src/hooks.h" />
+    <ClCompile Include="src/pdb.c" />
+    <ClInclude Include="src/pdb.h" />
     <ClInclude Include="src/undoc.h" />
     <ClCompile Include="src/utils.c" />
     <ClInclude Include="src/utils.h" />

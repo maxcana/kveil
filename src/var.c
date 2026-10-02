@@ -1,5 +1,6 @@
 // var.c: contains global values or offsets; initialized once on load
 #include <ntddk.h>
+#include <pdb.h>
 #include <stdint.h>
 #include <string.h>
 #include <undoc.h>
@@ -94,20 +95,31 @@ static PVOID where_kernelmodule(PCSTR ModuleFileName)
 }
 
 //* hardcoding
+
 typedef struct
 {
-    uint64_t win11_build_number;
-    uint64_t ExpQuerySystemInformation; // ntoskrnl!
-    uint64_t KeQueryPrimaryGroupThread; // ntoskrnl!
-    uint64_t GreProtectSpriteContent;   // win32kfull!
-} KveilOffsets;
+    PdbId build_number;
+    uint64_t ExpQuerySystemInformation;
+    uint64_t KeQueryPrimaryGroupThread;
+} NtoskrnlOffsets;
 
-// dump System32 then find these in IDA / or use the PDB for that windows version
-static const KveilOffsets hardcoded_offsets[] = {
+typedef struct
+{
+    PdbId build_number;
+    uint64_t GreProtectSpriteContent;
+} Win32kfullOffsets;
+
+static const NtoskrnlOffsets ntoskrnl_offsets[] = {
     {
-        .win11_build_number = 26200, // Win11 25H2
+        .build_number = {.guid = {0x01234567, 0x89ab, 0xcdef, {0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef}}, .age = 1, .name = {0}},
         .ExpQuerySystemInformation = 0x0000000140A06E08 - 0x140000000,
         .KeQueryPrimaryGroupThread = 0x0000000140490F54 - 0x140000000,
+    },
+};
+
+static const KveilOffsets win32kfull_offsets[] = {
+    {
+        .build_number = {.guid = {0x01234567, 0x89ab, 0xcdef, {0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef}}, .age = 1, .name = {0}},
         .GreProtectSpriteContent = 0x0000000140256110 - 0x140000000,
     },
 };
@@ -132,30 +144,68 @@ int init_globals()
     }
 
     // populate hardcoded
-    OSVERSIONINFOW osvi;
-    RtlGetVersion(&osvi);
-    uint64_t build = osvi.dwBuildNumber;
-    print("your win11 build is %d\n", build);
 
-    for (int i = 0; i < ARRAYSIZE(hardcoded_offsets); i++)
+    // get build numbers
+    PdbId ntoskrnl_build;
+    get_pdbid(loc_ntoskrnl, &ntoskrnl_build);
+    char ntoskrnl_guid_buf[80];
+    format_guid(ntoskrnl_build, ntoskrnl_guid_buf, 80);
+    print("your ntoskrnl build id: %s %s %u\n", ntoskrnl_build.name, ntoskrnl_guid_buf, ntoskrnl_build.age);
+
+    PdbId win32kfull_build;
+    get_pdbid(loc_win32kfull, &win32kfull_build);
+    char win32kfull_guid_buf[80];
+    format_guid(win32kfull_build, win32kfull_guid_buf, 80);
+    print("your win32kfull build id: %s %s %u\n", win32kfull_build.name, win32kfull_guid_buf, win32kfull_build.age);
+
+    // match your build to hardcoded offsets, resolve addresses
+    int failed = 0;
+    for (int i = 0; i < ARRAYSIZE(ntoskrnl_offsets); i++)
     {
-        KveilOffsets ko = hardcoded_offsets[i];
-        if (build == ko.win11_build_number)
+        NtoskrnlOffsets o = ntoskrnl_offsets[i];
+        if (pdbid_equal(ntoskrnl_build, o.build_number))
         {
-            print("found hardcoded offsets for win11 build %d...\n", build);
+            print("found hardcoded ntoskrnl offsets for build!\n", build);
 
-            loc_ExpQuerySystemInformation = (ExpQuerySystemInformation_t*)((uint64_t)loc_ntoskrnl + (uint64_t)ko.ExpQuerySystemInformation);
-            loc_KeQueryPrimaryGroupThread = (KeQueryPrimaryGroupThread_t*)((uint64_t)loc_ntoskrnl + (uint64_t)ko.KeQueryPrimaryGroupThread);
-            loc_GreProtectSpriteContent = (char*)((uint64_t)loc_win32kfull + (uint64_t)ko.GreProtectSpriteContent);
+            loc_ExpQuerySystemInformation = (ExpQuerySystemInformation_t*)((uint64_t)loc_ntoskrnl + (uint64_t)o.ExpQuerySystemInformation);
+            loc_KeQueryPrimaryGroupThread = (KeQueryPrimaryGroupThread_t*)((uint64_t)loc_ntoskrnl + (uint64_t)o.KeQueryPrimaryGroupThread);
 
             print("ntoskrnl!ExpQuerySystemInformation @ 0x%I64X\n", loc_ExpQuerySystemInformation);
             print("ntoskrnl!KeQueryPrimaryGroupThread @ 0x%I64X\n", loc_KeQueryPrimaryGroupThread);
-            print("win32kfull!GreProtectSpriteContent @ 0x%I64X\n", loc_GreProtectSpriteContent);
 
-            print("finished loading hardcoded offsets.\n", build);
-            return 1;
+            print("finished loading ntoskrnl offsets.\n", build);
+            break;
+        }
+        if (i == ARRAYSIZE(ntoskrnl_offsets) - 1)
+        {
+            print("ERROR missing hardcoded offsets for your windows build. fetch them from the pdb automatically with the python script using the above build id.\n");
+            failed = 1;
         }
     }
-    print("ERROR your win11 version (%d) is missing hardcoded offsets, go mine the offsets\n", build);
-    return 0;
+
+    for (int i = 0; i < ARRAYSIZE(win32kfull_offsets); i++)
+    {
+        Win32kfullOffsets o = win32kfull_offsets[i];
+        if (pdbid_equal(win32kfull_build, o.build_number))
+        {
+            print("found hardcoded win32kfull_build offsets for your build!\n", build);
+
+            loc_GreProtectSpriteContent = (char*)((uint64_t)loc_win32kfull + (uint64_t)o.GreProtectSpriteContent);
+
+            print("win32kfull!GreProtectSpriteContent @ 0x%I64X\n", loc_GreProtectSpriteContent);
+
+            print("finished loading win32kfull offsets.\n", build);
+            break;
+        }
+        if (i == ARRAYSIZE(win32kfull_offsets) - 1)
+        {
+            print("ERROR missing hardcoded offsets for your windows build. fetch them from the pdb automatically with the python script using the above build id.\n");
+            failed = 1;
+        }
+    }
+
+    if (failed == 1) return 0;
+
+    print("all offsets loaded successfully.\n");
+    return 1;
 }

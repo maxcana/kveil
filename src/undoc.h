@@ -159,3 +159,13 @@ typedef struct _RTL_PROCESS_MODULES
     ULONG NumberOfModules;
     _Field_size_(NumberOfModules) RTL_PROCESS_MODULE_INFORMATION Modules[1];
 } RTL_PROCESS_MODULES, *PRTL_PROCESS_MODULES;
+
+#pragma pack(push, 1)
+typedef struct _CV_RSDS
+{
+    uint32_t Signature; /* 'RSDS' == 0x53445352 (little-endian) */
+    GUID Guid;
+    uint32_t Age;
+    char PdbName[1];
+} CV_RSDS;
+#pragma pack(pop)
