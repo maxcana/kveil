@@ -35,7 +35,7 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING RegistryPath)
     if (hook_all() == 0)
     {
         print("hook_all failed\n");
-        bsod(0xE2);
+        // bsod(0xE2);
         return STATUS_SUCCESS;
     }
 

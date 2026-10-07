@@ -109,13 +109,8 @@ typedef struct
     uint64_t GreProtectSpriteContent;
 } Win32kfullOffsets;
 
+// add pdb-downloaded offsets here!
 static const NtoskrnlOffsets ntoskrnl_offsets[] = {
-    {
-        .build_number = {.guid = {0x01234567, 0x89ab, 0xcdef, {0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef}}, .age = 1, .name = {0}},
-        .ExpQuerySystemInformation = 0x0000000140A06E08 - 0x140000000,
-        .KeQueryPrimaryGroupThread = 0x0000000140490F54 - 0x140000000,
-    },
-
     {
         .build_number = {.guid = {0xc29ebfb0, 0x6b78, 0xb3c0, {0x20, 0xdc, 0xa6, 0x6d, 0x99, 0x71, 0x3f, 0x9e}}, .age = 1, .name = {0}},
         .ExpQuerySystemInformation = 0xA06DF8,
@@ -124,10 +119,6 @@ static const NtoskrnlOffsets ntoskrnl_offsets[] = {
 };
 
 static const Win32kfullOffsets win32kfull_offsets[] = {
-    {
-        .build_number = {.guid = {0x01234567, 0x89ab, 0xcdef, {0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef}}, .age = 1, .name = {0}},
-        .GreProtectSpriteContent = 0x0000000140256110 - 0x140000000,
-    },
     {
         .build_number = {.guid = {0x5cd57181, 0xbcfd, 0xc5ae, {0x8f, 0x48, 0x19, 0xbe, 0xb1, 0x19, 0x6f, 0x09}}, .age = 1, .name = {0}},
         .GreProtectSpriteContent = 0x256110,
